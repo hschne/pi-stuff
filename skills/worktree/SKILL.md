@@ -21,12 +21,6 @@ Set up a worktree after creation:
 ~/.scripts/worktree setup <worktree-directory>
 ```
 
-Compare a worktree to main (or working tree vs HEAD if there are unstaged changes):
-
-```bash
-~/.scripts/worktree diff <worktree-directory>
-```
-
 Open a worktree in tmuxinator:
 
 ```bash
@@ -44,11 +38,10 @@ Delete a worktree:
 1. Create a new worktree.
 2. Run setup inside that worktree.
 3. Do the requested work inside the worktree.
-4. Review changes with `worktree diff`.
-5. Either:
+4. Either:
    - create a PR from the worktree branch, or
    - integrate the changes directly into main, usually with a squash merge.
-6. Clean up by deleting the worktree.
+5. Clean up by deleting the worktree.
 
 ## Notes for agents
 
@@ -59,6 +52,7 @@ Delete a worktree:
 - When asked to integrate directly into main, use a deliberate git workflow.
 - When asked to clean up, ensure no uncommitted work is being lost before destroying the worktree.
 - **`FIX:` comments**: Hans may leave `# FIX: ...` comments directly in source files while reviewing a diff. Always grep for these before starting work: `grep -r "FIX:" .` — address each one, then remove the comment.
+- **`worktree diff`** opens an interactive visual diff in the terminal (DiffView). Do **not** run it — it is a manual user command only.
 
 ## Typical agent flow
 
@@ -66,5 +60,4 @@ Delete a worktree:
 ~/.scripts/worktree new "improve login flow"
 ~/.scripts/worktree setup 26-03-improve-login-flow
 cd worktrees/26-03-improve-login-flow
-~/.scripts/worktree diff 26-03-improve-login-flow
 ```

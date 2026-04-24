@@ -4,6 +4,28 @@
       "url": "https://api.raindrop.io/rest/v2/ai/mcp",
       "auth": "bearer",
       "bearerTokenEnv": "RAINDROP_API_KEY"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--executable-path",
+        "/usr/bin/chromium"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--headless",
+        "--executablePath",
+        "/usr/bin/chromium",
+        "--no-usageStatistics",
+        "--no-performanceCrux"
+      ]
     }
   }
 }

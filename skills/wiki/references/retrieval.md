@@ -36,8 +36,8 @@ qmd multi-get "projects/mapit/plans/*.md"
 ### Start a project session
 
 ```bash
-qmd get "projects/<project>/summary.md" --full 2>/dev/null
 qmd search "<project>" -c projects -n 5
+qmd search "<project>" -c projects --files | grep "/memory/" | head
 ```
 
 ### Retrieve prior work

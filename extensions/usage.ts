@@ -3,8 +3,9 @@ import type {
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
 import { appendFileSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
+import { Buffer } from "node:buffer";
 
 // =============================================================================
 // Logging
@@ -27,7 +28,11 @@ function debugLog(msg: string): void {
 // Types
 // =============================================================================
 
-type Provider = "anthropic" | "google-gemini-cli" | "openrouter";
+type Provider =
+  | "anthropic"
+  | "google-gemini-cli"
+  | "openrouter"
+  | "openai-codex";
 
 interface ClaudeUsageData {
   provider: "anthropic";
@@ -46,7 +51,17 @@ interface OpenRouterUsageData {
   credits: number;
 }
 
-type UsageData = ClaudeUsageData | GeminiUsageData | OpenRouterUsageData;
+interface OpenAICodexUsageData {
+  provider: "openai-codex";
+  utilization: number;
+  resetsAt: number | null;
+}
+
+type UsageData =
+  | ClaudeUsageData
+  | GeminiUsageData
+  | OpenRouterUsageData
+  | OpenAICodexUsageData;
 
 interface ClaudeOAuthUsageResponse {
   five_hour?: { utilization?: number; resets_at?: string };
@@ -67,6 +82,27 @@ interface OpenRouterCreditsResponse {
   };
 }
 
+interface OpenAICodexUsageResponse {
+  rate_limit?: {
+    primary_window?: {
+      used_percent?: number;
+      reset_at?: number;
+      limit_window_seconds?: number;
+      reset_after_seconds?: number;
+    } | null;
+    secondary_window?: {
+      used_percent?: number;
+      reset_at?: number;
+      limit_window_seconds?: number;
+      reset_after_seconds?: number;
+    } | null;
+  };
+}
+
+type OpenAICodexRateWindow = NonNullable<
+  NonNullable<OpenAICodexUsageResponse["rate_limit"]>["primary_window"]
+>;
+
 // =============================================================================
 // Constants
 // =============================================================================
@@ -79,15 +115,16 @@ const ICON = "󰓅";
 
 const CLAUDE_USAGE_ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
 const CLAUDE_BETA_HEADER = "oauth-2025-04-20";
-const GEMINI_QUOTA_ENDPOINT =
-  "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota";
+const GEMINI_QUOTA_ENDPOINT = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota";
 
 const OPENROUTER_CREDITS_ENDPOINT = "https://openrouter.ai/api/v1/credits";
+const OPENAI_CODEX_USAGE_ENDPOINT = "https://chatgpt.com/backend-api/codex/usage";
 
 const SUPPORTED_PROVIDERS: Provider[] = [
   "anthropic",
   "google-gemini-cli",
   "openrouter",
+  "openai-codex",
 ];
 
 // =============================================================================
@@ -134,6 +171,60 @@ function getUsageColor(percent: number): "error" | "warning" | "dim" {
   return "dim";
 }
 
+function toStatusErrorText(error: string): string {
+  if (error === "unauthorized") return "auth!";
+  if (error === "no token") return "no key";
+  if (error.startsWith("HTTP ")) return error.slice(0, 8); // e.g. "HTTP 429"
+  return "err!";
+}
+
+function isOpenAICodexRateWindow(
+  window: OpenAICodexRateWindow | null | undefined,
+): window is OpenAICodexRateWindow {
+  return !!window;
+}
+
+function selectMostUsedWindow(
+  windows: OpenAICodexRateWindow[],
+): OpenAICodexRateWindow {
+  let selected = windows[0];
+
+  for (const window of windows) {
+    const currentUtilization = selected.used_percent ?? -1;
+    const nextUtilization = window.used_percent ?? -1;
+    if (nextUtilization > currentUtilization) {
+      selected = window;
+    }
+  }
+
+  return selected;
+}
+
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+
+  try {
+    const payload = Buffer.from(parts[1], "base64url").toString("utf8");
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function getOpenAIAccountId(token: string): string | null {
+  const payload = parseJwtPayload(token);
+  const authClaims = payload?.["https://api.openai.com/auth"];
+
+  if (!authClaims || typeof authClaims !== "object") {
+    return null;
+  }
+
+  const accountId = (authClaims as Record<string, unknown>).chatgpt_account_id;
+  return typeof accountId === "string" ? accountId : null;
+}
+
 async function checkResponse(res: Response): Promise<void> {
   if (res.status === 401) {
     throw new Error("unauthorized");
@@ -158,7 +249,6 @@ async function fetchClaudeUsage(token: string): Promise<ClaudeUsageData> {
       Authorization: `Bearer ${token}`,
       "anthropic-beta": CLAUDE_BETA_HEADER,
       Accept: "application/json",
-      "Content-Type": "application/json",
       "User-Agent": "pi-extension-usage/1.0",
     },
     signal: AbortSignal.timeout(TIMEOUT),
@@ -190,11 +280,13 @@ async function fetchGeminiUsage(apiKeyJson: string): Promise<GeminiUsageData> {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
+      Accept: "application/json",
       "Content-Type": "application/json",
       "User-Agent": "pi-extension-usage/1.0",
       "X-Goog-Api-Client": "gl-node/22.17.0",
     },
     body: JSON.stringify({ project: projectId }),
+    signal: AbortSignal.timeout(TIMEOUT),
   });
 
   await checkResponse(res);
@@ -221,7 +313,7 @@ async function fetchGeminiUsage(apiKeyJson: string): Promise<GeminiUsageData> {
   return {
     provider: "google-gemini-cli",
     utilization: Math.round((1 - lowestFraction) * 100),
-    resetsAt: parseISO8601ToUnix(lowestResetTime),
+    resetsAt: parseISO8601ToUnix(lowestResetTime ?? undefined),
   };
 }
 
@@ -232,8 +324,10 @@ async function fetchOpenRouterUsage(
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
+      Accept: "application/json",
       "User-Agent": "pi-extension-usage/1.0",
     },
+    signal: AbortSignal.timeout(TIMEOUT),
   });
 
   await checkResponse(res);
@@ -246,6 +340,59 @@ async function fetchOpenRouterUsage(
   return {
     provider: "openrouter",
     credits: data.data.total_credits - data.data.total_usage,
+  };
+}
+
+async function fetchOpenAICodexUsage(
+  token: string,
+): Promise<OpenAICodexUsageData> {
+  const accountId = getOpenAIAccountId(token);
+  const origin = new URL(OPENAI_CODEX_USAGE_ENDPOINT).origin;
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+    // chatgpt.com is behind bot protection; browser-like headers avoid false-positive challenges.
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Dest": "empty",
+    Origin: origin,
+    Referer: `${origin}/codex/settings/usage`,
+  };
+
+  if (accountId) {
+    headers["chatgpt-account-id"] = accountId;
+  }
+
+  const res = await fetch(OPENAI_CODEX_USAGE_ENDPOINT, {
+    method: "GET",
+    headers,
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+
+  await checkResponse(res);
+  const data: OpenAICodexUsageResponse = await res.json();
+
+  const windows = [
+    data.rate_limit?.primary_window,
+    data.rate_limit?.secondary_window,
+  ].filter(isOpenAICodexRateWindow);
+
+  if (windows.length === 0) {
+    throw new Error("missing codex usage data");
+  }
+
+  const selected = selectMostUsedWindow(windows);
+
+  if (selected.used_percent === undefined) {
+    throw new Error("missing codex utilization");
+  }
+
+  return {
+    provider: "openai-codex",
+    utilization: Math.round(selected.used_percent),
+    resetsAt: selected.reset_at ?? null,
   };
 }
 
@@ -262,16 +409,7 @@ function updateUI(ctx: ExtensionContext) {
   }
 
   if (lastError) {
-    let errorText: string;
-    if (lastError === "unauthorized") {
-      errorText = "auth!";
-    } else if (lastError === "no token") {
-      errorText = "no key";
-    } else if (lastError?.startsWith("HTTP ")) {
-      errorText = lastError.slice(0, 8); // e.g. "HTTP 429"
-    } else {
-      errorText = "err!";
-    }
+    const errorText = toStatusErrorText(lastError);
     ctx.ui.setStatus(
       STATUS_KEY,
       ctx.ui.theme.fg("error", `${ICON} ${errorText}`),
@@ -303,6 +441,25 @@ function updateUI(ctx: ExtensionContext) {
 // Refresh Logic
 // =============================================================================
 
+async function fetchUsageForProvider(
+  provider: Provider,
+  apiKey: string,
+): Promise<UsageData> {
+  switch (provider) {
+    case "anthropic":
+      return fetchClaudeUsage(apiKey);
+    case "google-gemini-cli":
+      return fetchGeminiUsage(apiKey);
+    case "openrouter":
+      return fetchOpenRouterUsage(apiKey);
+    case "openai-codex":
+      // For openai-codex usage, use the provider token directly.
+      // getApiKeyAndHeaders() may return request-specific headers/apiKey variants
+      // that do not work against the ChatGPT backend usage endpoint.
+      return fetchOpenAICodexUsage(apiKey);
+  }
+}
+
 async function performRefresh(ctx: ExtensionContext): Promise<void> {
   const provider = ctx.model?.provider;
 
@@ -322,13 +479,7 @@ async function performRefresh(ctx: ExtensionContext): Promise<void> {
       return;
     }
 
-    if (provider === "anthropic") {
-      cachedUsage = await fetchClaudeUsage(apiKey);
-    } else if (provider === "google-gemini-cli") {
-      cachedUsage = await fetchGeminiUsage(apiKey);
-    } else {
-      cachedUsage = await fetchOpenRouterUsage(apiKey);
-    }
+    cachedUsage = await fetchUsageForProvider(provider, apiKey);
     lastError = null;
   } catch (err) {
     lastError = err instanceof Error ? err.message : "unknown error";

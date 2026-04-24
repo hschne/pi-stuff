@@ -6,12 +6,13 @@ Use this reference when deciding where a document belongs in `~/Documents/Wiki/`
 
 ```text
 ~/Documents/Wiki/
-  projects/          # Active projects, each with plans/ and log/
-  areas/             # Ongoing responsibilities
-  resources/         # Reusable reference knowledge
-  memory/            # AI workflow artifacts
-    agents/          # Reusable AGENTS.md fragments
-    sessions/        # Session summaries
+  projects/<name>/
+    memory/         # Session logs and session summaries
+    specs/          # Plans or specifications
+  areas/<name>/
+    memory/          # Session logs and session summaries
+  resources/<topic>/
+    memory/          # Session logs and session summaries
   archive/           # Inactive or historical material
 ```
 
@@ -22,26 +23,29 @@ Use this reference when deciding where a document belongs in `~/Documents/Wiki/`
 | `projects`  | Active project files and project-specific documents    | yes                        |
 | `areas`     | Ongoing domains like community, writing, or life admin | yes                        |
 | `resources` | Reusable references, runbooks, and research            | yes                        |
-| `memory`    | Agent artifacts and session summaries                  | yes                        |
 | `archive`   | Old or inactive material                               | no, only search explicitly |
 
 ## Where to Save What
 
-| User intent                  | Path pattern                                    | Naming                    |
-| ---------------------------- | ----------------------------------------------- | ------------------------- |
-| Save a spec                  | `projects/<project>/specs/<slug>.md`            | lowercase hyphenated slug |
-| Write a project plan         | `projects/<project>/plans/<yy-mm-dd>-<slug>.md` | dated file name           |
-| Save to the project          | `projects/<project>/<name>.md`                  | varies by context         |
-| Create a runbook or resource | `resources/<slug>.md`                           | lowercase hyphenated slug |
-| Add to an area               | `areas/<area>/<slug>.md`                        | lowercase hyphenated slug |
-| Save session output          | `memory/sessions/<name>.md`                     | descriptive slug          |
-| Save agent guidance          | `memory/agents/<name>.md`                       | descriptive slug          |
-| Save inactive history        | `archive/<path>.md`                             | preserve context          |
+Use dated slugs for wiki documents by default. Prefer `yy-mm-dd-<slug>.md` unless the user explicitly asks to update a specific existing file with another name.
+
+| User intent                  | Path pattern                                     |
+| ---------------------------- | ------------------------------------------------ |
+| Save a spec or plan          | `projects/<project>/<yy-mm-dd>-<slug>.md`        |
+| Save to the project          | `projects/<project>/<yy-mm-dd>-<slug>.md`        |
+| Create a runbook or resource | `resources/<yy-mm-dd>-<slug>.md`                 |
+| Add to an area               | `areas/<area>/<yy-mm-dd>-<slug>.md`              |
+| Save a project session log   | `projects/<project>/memory/<yy-mm-dd>-<slug>.md` |
+| Save a resource/tooling log  | `resources/<topic>/memory/<yy-mm-dd>-<slug>.md`  |
+| Save an area session log     | `areas/<area>/memory/<yy-mm-dd>-<slug>.md`       |
+| Save inactive history        | `archive/<path>/<yy-mm-dd>-<slug>.md`            |
 
 ## Selection Heuristics
 
 - Prefer `projects` when the document belongs to one active project.
 - Prefer `resources` when the document should be reusable outside a single project.
 - Prefer `areas` for long-lived responsibilities that are not projects.
-- Prefer `memory` for agent-facing artifacts and session history.
 - Use `archive` only for inactive material or when explicitly requested.
+- For session logs, pick the destination based on **what the session was about**, not where pi was invoked from. A session fixing a Mapit bug goes to `projects/mapit/memory/` even if pi was run from `~`.
+- `memory/` folders are for session logs and session summaries only. Any other document the agent is asked to write (specs, runbooks, area notes) goes in the normal location for that document type.
+- There is no general-purpose session dump folder. Every log belongs somewhere specific.

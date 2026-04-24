@@ -5,7 +5,7 @@ description: "Understand how summaries are written. Use this when tasked with wr
 
 # Summary Skill
 
-Summaries are concrete documents that describe the intent and outcome of a session. The clearly describe was done done to archive a specific goal.
+Summaries are concrete documents that describe the intent and outcome of a session. They clearly describe what was done to archive a specific goal.
 
 ## Writing Summaries
 
@@ -17,15 +17,16 @@ A summary should contain:
 - Code snippets worth keeping (if any)
 - Resources and research that were used (if any)
 
-Unless stated otherwise always write a summary to the relevant wiki folder.
+Session summaries must follow the wiki location rules and ALWAYS be put in the relevant `memory/` folder.
 
 ### Output Format
 
 ```markdown
 description: "Brief description of what was discussed"
 tags: ["tag1", "tag2"]
-created: "YYYY-MM-DD"
-updated: "YYYY-MM-DD"
+created: "yy-mm-dd"
+updated: "yy-mm-dd"
+
 ---
 
 # Title
@@ -45,9 +46,4 @@ updated: "YYYY-MM-DD"
 ## Snippets
 
 ...
-
-## Next steps
-
-...
-
 
