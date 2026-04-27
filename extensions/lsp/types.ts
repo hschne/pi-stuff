@@ -30,6 +30,7 @@ export interface ServerConfig {
   disabled?: boolean;
   env?: Record<string, string>;
   initialization?: Record<string, unknown>;
+  languageIds?: Record<string, string>;
 }
 
 /**
@@ -90,6 +91,11 @@ export const LANGUAGE_IDS: Record<string, string> = {
   ".rake": "ruby",
   ".gemspec": "ruby",
   ".ru": "ruby",
+  ".erb": "erb",
+  ".html.erb": "erb",
+  ".html": "html",
+  ".css": "css",
+  ".scss": "scss",
   ".svelte": "svelte",
   ".md": "markdown",
   ".markdown": "markdown",

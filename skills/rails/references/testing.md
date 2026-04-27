@@ -145,6 +145,22 @@ test "valid location advances" do ...
 test "back from details" do ...
 ```
 
+## No Assertion Descriptions
+
+Do not pass custom description/message strings to assertions. Keep assertions minimal and rely on test names for intent.
+
+**Bad:**
+
+```ruby
+assert_nil inertia.props[:map], "expected map to be absent"
+```
+
+**Good:**
+
+```ruby
+assert_nil inertia.props[:map]
+```
+
 ## Use Simple Fixtures
 
 Prefer simple fixtures over factories and creating models on the fly. Modify fixtures as necessary in the tests.
@@ -248,15 +264,15 @@ end
 
 ## Avoid Testing Response Content
 
-Reading page content is brittle and slow, avoid it. 
+Reading page content is brittle and slow, avoid it.
 
 **Bad**:
+
 ```ruby
 # Needs to render the full page, and breaks easily!
 assert_includes response.body, I18n.t("shared.pagination.next")
 assert_includes response.body, I18n.t("shared.pagination.page_info", current: 1, total: 2)
 ```
-
 
 ## No Numbers in Variable Names
 
@@ -403,6 +419,3 @@ assert_equal 3, Entry.count
 - Business logic methods
 - Controller responses
 - Integration flows
-
-
-

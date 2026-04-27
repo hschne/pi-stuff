@@ -13,40 +13,51 @@ Use this skill when adding or changing styling in ERB or Svelte.
 - Prefer modern layout primitives like flex and grid
 - Keep styling close to markup
 - Avoid JavaScript string interpolation for class toggling when framework-native patterns exist
+- For nested rounded surfaces, match radii mathematically: outer radius = inner radius + padding
+- For floating surfaces with shadows, add a subtle `base-content/20` ring or outline so the edge remains visible on light backgrounds
 
-## Rails / ERB
+## Visual Polish Patterns
 
-Use `class_names` for conditional classes.
+### Matching Inner and Outer Border Radius
 
-Good:
+When a rounded child sits inside a padded rounded parent, calculate the parent radius from the child radius plus padding.
 
-```erb
-<div class="<%= class_names('mb-5', active: item.for_sale?) %>">
+**Good:**
+
+```html
+<div class="rounded-[calc(var(--radius-xl)+0.5rem)] p-2">
+  <img class="rounded-xl" />
+</div>
 ```
 
-Bad:
+**Bad:**
 
-```erb
-<div class="mb-5 <%= item.for_sale? ? 'active' : '' %>">
+```html
+<div class="rounded-2xl p-2">
+  <img class="rounded-xl" />
+</div>
 ```
 
-## Svelte
+Use the inverse formula when the outer radius is fixed: inner radius = outer radius - padding.
 
-Prefer Svelte class directives over interpolated class strings.
+### Shadow Edge Definition
 
-Good:
+For shadowed cards, popovers, and map popups, add a subtle edge so the shadow does not blur into the background.
 
-```svelte
-<input
-  class="file-input file-input-bordered w-full"
-  class:file-input-error={errors['image']}
->
+Prefer Tailwind for normal markup:
+
+```html
+<div class="shadow-xl ring-1 ring-base-content/20">...</div>
 ```
 
-Bad:
+For third-party DOM or scoped CSS where Tailwind utilities cannot target the rendered element reliably, keep the existing shadow and use an outline:
 
-```svelte
-<input class="file-input file-input-bordered w-full {errors['image'] ? 'file-input-error' : ''}">
+```css
+.floating-surface {
+  outline: 1px solid
+    color-mix(in oklab, var(--color-base-content) 20%, transparent);
+  box-shadow: var(--shadow-xl);
+}
 ```
 
 ## Use Cases

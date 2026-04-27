@@ -3,8 +3,8 @@ name: summarizer
 description: Save current session to the Wiki with a concise summary
 model: openai-codex/gpt-5.4-mini
 thinking: low
-systemPromptMode: replace
-inheritProjectContext: false
+systemPromptMode: append
+inheritProjectContext: true
 inheritSkills: false
 skills: wiki, summary
 ---

@@ -1,6 +1,6 @@
 # Plan Workflow
 
-Follow this process unless the user explicitly asks to skip part of it.
+Follow this process unless the user explicitly asks to skip a step.
 
 ## 1. Confirm the request
 
@@ -12,64 +12,33 @@ Identify:
 
 If the user already provided this, do not ask again.
 
-## 2. Explore the codebase first
+## 2. Explore the codebase
 
-Before writing the plan, verify the current state in code.
+Before writing or asking, verify the current state in code. Read the relevant files, search for existing implementations, and check any project notes needed to understand the scope.
 
-Read the relevant files, search for existing implementations, and check any project-specific notes needed to understand the request.
+## 3. Grill the user
 
-## 3. Ask clarifying questions when needed
-
-Do not ask generic questions. Ask only what is required to resolve plan structure.
-
-You must ask follow-up questions when any of these are unclear:
-
-- step ordering or dependency direction
-- whether related cleanup belongs in the same plan
-- whether the work should be one step or split across multiple deployable steps
-- naming, ownership, or architectural placement
-- explicit scope boundaries
-
-Good question examples:
-
-- "Should the bottom-sheet cleanup and map-context merge be one step or two?"
-- "Do you want the plan to include deleting the helper files, or leave deletion for a follow-up?"
-- "Should this plan include behavior-preserving cleanup only, or also the snap-point model change?"
-
-Bad question examples:
-
-- "Can you tell me more?"
-- "Any other thoughts?"
-- "What do you want to do?"
+Load and follow the `grill-me` skill. Do not move to step 4 until scope, sequencing, and all structural decisions are resolved.
 
 ## 4. Choose the step structure
 
-Prefer 2–5 top-level steps.
+Prefer 2–5 top-level steps. Use more than 5 only when the work clearly breaks into several independently shippable phases.
 
-Use more than 5 only when the work clearly breaks into several independently shippable phases.
-
-Each top-level step should:
-
-- represent a coherent unit of work
-- have a clear outcome
-- be testable or manually verifiable
-- avoid mixing unrelated concerns
+Each step should represent a coherent unit of work with a clear, verifiable outcome. Avoid mixing unrelated concerns in a single step.
 
 If the user gives structural feedback, rewrite the step layout cleanly instead of patching the old structure.
 
-## 5. Write only the final plan
+## 5. Write the final plan
 
-The final saved plan should be the clean result, not a transcript of your exploration.
+Save to `./plans/YY-MM-DD-<slug>.md` using the template in `references/template.md`.
 
-Keep background short. The plan is for execution.
+The saved plan is the clean result — not a transcript of your exploration. Keep background short.
 
 ## 6. Validate before finishing
 
-Before returning the plan, confirm:
-
-- the file name matches `YY-MM-DD-<slug>.md`
-- the plan uses the required headings
+- file name matches `YY-MM-DD-<slug>.md`
+- required headings are present
 - steps are numbered and actionable
 - each step includes file paths, changes, and acceptance criteria
 - non-goals and risks are explicit
-- the structure reflects user feedback exactly
+- structure reflects user feedback exactly

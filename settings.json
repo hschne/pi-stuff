@@ -1,8 +1,8 @@
 {
   "quietStartup": true,
-  "lastChangelogVersion": "0.68.0",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.3-codex",
+  "lastChangelogVersion": "0.70.2",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-4-6",
   "theme": "tokyo-night",
   "packages": [
     "npm:pi-mcp-adapter",
@@ -162,16 +162,39 @@
           ".html.erb"
         ],
         "rootPatterns": []
+      },
+      "tailwindcss": {
+        "command": [
+          "tailwindcss-language-server",
+          "--stdio"
+        ],
+        "extensions": [
+          ".html",
+          ".erb",
+          ".html.erb",
+          ".css",
+          ".scss",
+          ".js",
+          ".jsx",
+          ".ts",
+          ".tsx",
+          ".svelte"
+        ],
+        "rootPatterns": [
+          "package.json"
+        ]
       }
     }
   },
   "defaultThinkingLevel": "low",
   "hideThinkingBlock": true,
   "enabledModels": [
-    "anthropic/claude-sonnet-4-6",
     "anthropic/claude-opus-4-6",
-    "anthropic/claude-haiku-4-5",
-    "openai-codex/gpt-5.4",
-    "openai-codex/gpt-5.3-codex"
-  ]
+    "anthropic/claude-sonnet-4-6",
+    "openai-codex/gpt-5.5",
+    "openai-codex/gpt-5.3-codex",
+    "google/gemini-3-pro-preview"
+  ],
+  "treeFilterMode": "default",
+  "enableSkillCommands": false
 }
