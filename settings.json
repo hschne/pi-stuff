@@ -1,8 +1,8 @@
 {
   "quietStartup": true,
-  "lastChangelogVersion": "0.70.2",
-  "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-4-6",
+  "lastChangelogVersion": "0.73.0",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
   "theme": "tokyo-night",
   "packages": [
     "npm:pi-mcp-adapter",
@@ -186,14 +186,14 @@
       }
     }
   },
-  "defaultThinkingLevel": "low",
+  "defaultThinkingLevel": "high",
   "hideThinkingBlock": true,
   "enabledModels": [
     "anthropic/claude-opus-4-6",
     "anthropic/claude-sonnet-4-6",
     "openai-codex/gpt-5.5",
     "openai-codex/gpt-5.3-codex",
-    "google/gemini-3-pro-preview"
+    "openrouter/deepseek/deepseek-v4-pro"
   ],
   "treeFilterMode": "default",
   "enableSkillCommands": false
