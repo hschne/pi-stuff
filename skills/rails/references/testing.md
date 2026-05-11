@@ -124,6 +124,28 @@ test "creates with valid params" do
 end
 ```
 
+## Test Names
+
+Test names should read as natural sentences. Do not use prefixes, namespaces, or category labels. Using the method name being tested is fine.
+
+**Bad:**
+
+```ruby
+test "standalone: saves entry without project" do
+test "guest_flow: creates anonymous entry" do
+test "validation - rejects blank title" do
+```
+
+**Good:**
+
+```ruby
+test "save entry without project" do
+test "guest submission creates anonymous entry" do
+test "rejects blank title on details step" do
+test "show? returns true for guests" do
+test "destroy? rejects non-owner" do
+```
+
 ## No Comments in Tests
 
 Tests are documentation themselves. Do not add section headers, inline comments, or explanatory notes. The test name explains what is being tested.
@@ -196,6 +218,36 @@ default:
 project = projects(:default)
 project.update(title 'updated title')
 ```
+
+## Use `$LABEL` in Fixtures
+
+Use Rails' `$LABEL` interpolation to derive fixture values from the fixture name. This keeps fixtures minimal and avoids hardcoded strings that add no value.
+
+**Bad:**
+
+```yaml
+standalone:
+  user: default
+  title: Standalone Entry
+  slug: standalone-entry
+  description: A standalone entry without a project
+  geometry_json: '{"type":"Point","coordinates":[16.37,48.21]}'
+  latitude: 48.21
+  longitude: 16.37
+```
+
+**Good:**
+
+```yaml
+standalone:
+  user: default
+  title: $LABEL
+  slug: $LABEL
+  description: $LABEL description
+  geometry_json: '{"type":"Point","coordinates":[0,0]}'
+```
+
+Only add fields that distinguish the fixture from others. Omit columns that are defaults or computed.
 
 ## Fixtures Over Creating Data
 
@@ -272,30 +324,6 @@ Reading page content is brittle and slow, avoid it.
 # Needs to render the full page, and breaks easily!
 assert_includes response.body, I18n.t("shared.pagination.next")
 assert_includes response.body, I18n.t("shared.pagination.page_info", current: 1, total: 2)
-```
-
-## No Numbers in Variable Names
-
-Don't use numbered suffixes like `entry1`, `vote2`. Use descriptive names that reflect the role in the test.
-
-**Bad:**
-
-```ruby
-entry1 = build_entry
-entry2 = build_entry
-vote1 = Vote.create!(entry: entry1, user: @user)
-vote2 = Vote.create!(entry: entry2, user: @user)
-assert_equal vote2, @guest.latest_vote
-```
-
-**Good:**
-
-```ruby
-older_entry = build_entry
-newer_entry = build_entry
-older_vote = Vote.create!(entry: older_entry, user: @user)
-newer_vote = Vote.create!(entry: newer_entry, user: @user)
-assert_equal newer_vote, @guest.latest_vote
 ```
 
 ## No Assertions Inside Blocks

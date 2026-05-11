@@ -78,9 +78,10 @@ end
 ```
 
 They must not contain:
+
 - Business logic
 - Complex conditionals
-- Multiple model operations 
+- Multiple model operations
 - Data transformation
 
 ## Avoid Custom Actions.
@@ -89,30 +90,45 @@ Prefer a nested CRUD controller over a custom action like ProjectsController#arc
 
 ## Use Namespace Controllers for Scoping
 
-**Pattern:**
+**Bad:**
 
 ```ruby
-# app/controllers/participant/application_controller.rb
-class Participant::ApplicationController < ::ApplicationController
-  before_action :set_participant
+module Projects
+  class EntriesController < ApplicationController
+    before_action :set_project
 
-  private
+    private
 
-  def set_participant
-    @participant = ::Participant.find_by!(access_token: params[:access_token])
-  end
-end
-
-# app/controllers/participant/clouds_controller.rb
-class Participant::CloudsController < Participant::ApplicationController
-  # @participant is automatically set
-  def index
-    @clouds = @participant.clouds.recent
+    def set_project
+      @project = Project.find(params.expect(:project_id))
+    end
   end
 end
 ```
 
-All routes under `Participant::` are automatically scoped. No need for concerns or custom modules.
+**Good:**
+
+```ruby
+module Projects
+  class ApplicationController < ::ApplicationController
+    before_action :set_project
+
+    private
+
+    def set_project
+      @project = Project.find(params.expect(:project_id))
+    end
+  end
+
+  class EntriesController < Projects::ApplicationController
+    def show
+      @entry = @project.entries.find(params.expect(:id))
+    end
+  end
+end
+```
+
+Use this pattern for any namespace that shares a parent resource or authentication scope.
 
 ## Return Early, Use Guard Clauses
 
