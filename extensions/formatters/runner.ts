@@ -1,5 +1,5 @@
 import { execSync, spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import type {
   FormatterConfig,
   FormatResult,
@@ -43,7 +43,7 @@ export async function runFormatter(
 
   return new Promise((resolvePromise) => {
     const proc = spawn(cmd, finalArgs, {
-      cwd,
+      cwd: dirname(absolutePath),
       env: { ...process.env, ...config.environment },
       stdio: ["ignore", "ignore", "ignore"], // Ignore all output (like opencode)
     });
