@@ -31,8 +31,24 @@ Frontend should own:
 - submission/loading state
 - event handlers
 
-## Svelte Conventions
+## Navigation
 
-- prefer constant function declarations
-- prefer early returns over nested branching
-- keep components presentation-focused when backend can compute state
+Always use the Inertia `Link` component for in-app navigation.
+
+**Good:**
+
+```svelte
+<script>
+  import { Link } from '@inertiajs/svelte'
+</script>
+
+<Link href={'/account'}>View account</Link>
+```
+
+**Bad:**
+
+```svelte
+<a href={`/account`}>View account</a>
+```
+
+Use plain `<a>` tags only for navigating to pages outside of Inertia pages (e.g. server-rendered ERB pages).

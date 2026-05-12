@@ -34,6 +34,7 @@ Use the focused reference that matches the task:
 
 | Topic               | Path                                                | Reference                                                |
 | ------------------- | --------------------------------------------------- | -------------------------------------------------------- |
+| active record       | `app/models/**/*`, `app/policies/**/*`              | [active-record](references/active-record.md)             |
 | models              | `app/models/**/*`                                   | [models](references/models.md)                           |
 | controllers         | `app/controllers/**/*`                              | [controllers](references/controllers.md)                 |
 | policies            | `app/policies/**/*`                                 | [policies](references/policies.md)                       |
