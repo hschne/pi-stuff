@@ -1,8 +1,8 @@
 {
   "quietStartup": true,
-  "lastChangelogVersion": "0.74.0",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5",
+  "lastChangelogVersion": "0.75.3",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-opus-4-6",
   "theme": "tokyo-night",
   "packages": [
     "npm:pi-mcp-adapter",
@@ -10,7 +10,8 @@
     "npm:pi-subagents",
     "npm:pi-web-access",
     "npm:pi-annotate",
-    "npm:pi-rewind-hook"
+    "npm:pi-rewind-hook",
+    "npm:pi-interactive-shell"
   ],
   "formatters": {
     "standardrb": {
@@ -186,7 +187,7 @@
       }
     }
   },
-  "defaultThinkingLevel": "minimal",
+  "defaultThinkingLevel": "medium",
   "hideThinkingBlock": false,
   "enabledModels": [
     "anthropic/claude-opus-4-6",
@@ -198,6 +199,6 @@
   "treeFilterMode": "default",
   "enableSkillCommands": false,
   "terminal": {
-    "showTerminalProgress": true
+    "showTerminalProgress": false
   }
 }

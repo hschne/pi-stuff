@@ -1,9 +1,10 @@
 ---
 description: Autonomous issue implementer — picks, implements, verifies, and commits one issue per iteration
+model: anthropic/claude-sonnet-4-6
+thinking: medium
 subagent: worker
 loop: unlimited
-converge: false
-fresh: true
+converge: true
 ---
 
 Each iteration, do exactly one thing:
@@ -22,6 +23,8 @@ Each iteration, do exactly one thing:
 - ONE issue per iteration. Do not batch.
 - Do not create, modify, or split issues. Only implement what exists.
 - Do not skip verification.
-- Commit messages should reference the issue.
+- At the end, output only one line:
+  - `Implemented <ISSUE-ID>`
+  - or `No open issues`
 
 $@
