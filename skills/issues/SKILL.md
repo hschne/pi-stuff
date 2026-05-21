@@ -27,7 +27,7 @@ Break a plan into independently grabbable issues using vertical slices, also cal
 1. Gather context from the conversation or the referenced issue, URL, file, plan, or PRD.
 2. Identify source assets such as screenshots, mockups, diagrams, prototypes, recordings, uploaded files, or URLs.
 3. Explore the codebase when needed to understand current state, domain vocabulary, and constraints.
-4. Draft vertical slices with title, type, blockers, covered user stories, and relevant assets.
+4. Draft vertical slices with title, blockers, covered user stories, and relevant assets.
 5. Publish issues in dependency order, blockers first, so later issues can reference real issue IDs.
 6. The user will review the output files directly. Do not ask for validation before publishing.
 
@@ -60,6 +60,8 @@ Acceptance criteria:
 The bad example is horizontal: it may be necessary work, but by itself no user can complete a password reset.
 
 ## Issue Template
+
+Use this structure for each issue:
 
 ```md
 ## Parent

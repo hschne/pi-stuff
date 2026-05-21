@@ -21,7 +21,6 @@ Synthesize the current conversation and codebase understanding into a product re
 - Do not ask the user for confirmation before publishing. Use your best judgment for modules and test coverage based on the conversation context. The user will review the output file directly.
 - Do not include specific file paths or code snippets unless a prototype snippet captures a decision more precisely than prose.
 - Preserve referenced assets such as screenshots, mockups, diagrams, prototypes, recordings, or uploaded files so downstream issues can link back to them.
-- Apply the `ready-for-agent` triage label when publishing, unless instructed otherwise.
 
 ## Workflow
 

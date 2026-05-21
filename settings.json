@@ -200,5 +200,21 @@
   "enableSkillCommands": false,
   "terminal": {
     "showTerminalProgress": false
+  },
+  "subagents": {
+    "agentOverrides": {
+      "planner": {
+        "disabled": true
+      },
+      "researcher": {
+        "disabled": true
+      },
+      "delegate": {
+        "disabled": true
+      },
+      "oracle": {
+        "disabled": true
+      }
+    }
   }
 }
