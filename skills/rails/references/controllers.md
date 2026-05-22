@@ -84,6 +84,38 @@ They must not contain:
 - Multiple model operations
 - Data transformation
 
+## Strong Parameters: Just Permit, Don't Transform
+
+Strong params should only call `require`, `permit`, and nothing else. Never coerce types, symbolize keys, or restructure the hash in the controller. When splatted with `**`, permitted params automatically become a symbolized hash. Let the consuming model handle any type coercion it needs.
+
+**Bad:**
+
+```ruby
+def map_params
+  return {} if params[:map].blank?
+
+  permitted = params.require(:map).permit(bounds: [:west, :south, :east, :north])
+  result = {}
+  if permitted[:bounds].present?
+    result[:bounds] = permitted[:bounds].to_h.transform_values(&:to_f)
+  end
+  result
+end
+```
+
+**Good:**
+
+```ruby
+def map_params
+  return {} if params[:map].blank?
+
+  params.require(:map).permit(bounds: [:west, :south, :east, :north])
+end
+
+# Consumer receives symbolized kwargs automatically:
+# Map.new(projects:, entries:, **map_params)
+```
+
 ## Avoid Custom Actions.
 
 Prefer a nested CRUD controller over a custom action like ProjectsController#archive.
