@@ -1,8 +1,8 @@
 {
   "quietStartup": true,
-  "lastChangelogVersion": "0.75.3",
+  "lastChangelogVersion": "0.75.4",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-6",
+  "defaultModel": "claude-sonnet-4-6",
   "theme": "tokyo-night",
   "packages": [
     "npm:pi-mcp-adapter",
@@ -187,7 +187,7 @@
       }
     }
   },
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "low",
   "hideThinkingBlock": false,
   "enabledModels": [
     "anthropic/claude-opus-4-6",

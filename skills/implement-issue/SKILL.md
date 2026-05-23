@@ -33,4 +33,5 @@ Implement exactly one existing issue from the current project.
 8. If verification fails, fix the failures and re-run verification.
 9. When verification passes, move the issue to done.
 10. Commit all changes with a clear message.
+11. Append the issue number to `.agents/log.txt`. You MUST use the `write` or `edit` tool to do this!
 11. Output exactly `Implemented <ISSUE-ID>`.
