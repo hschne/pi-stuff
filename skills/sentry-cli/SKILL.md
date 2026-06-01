@@ -21,6 +21,7 @@ Best practices and operational guidance for AI coding agents using the Sentry CL
 - **Prefer CLI commands over raw API calls** — the CLI has dedicated commands for most tasks. Reach for `sentry issue view`, `sentry issue list`, `sentry trace view`, etc. before constructing API calls manually or fetching external documentation.
 - **Use `sentry schema` to explore the API** — if you need to discover API endpoints, run `sentry schema` to browse interactively or `sentry schema <resource>` to search. This is faster than fetching OpenAPI specs externally.
 - **Use `sentry issue view <id>` to investigate issues** — when asked about a specific issue (e.g., `CLI-G5`, `PROJECT-123`), use `sentry issue view` directly.
+- **Analyze the error message before fetching events** — `sentry issue view` returns the exception type, message, and culprit. Read these first. Most root causes are evident from the issue summary alone (e.g., `ActionView::MissingTemplate` with `formats: [:xml]`). Only fetch event details when the summary is ambiguous.
 - **Use `--json` for machine-readable output** — pipe through `jq` for filtering. Human-readable output includes formatting that is hard to parse.
 - **The CLI auto-detects org/project** — most commands work without explicit targets by checking `.sentryclirc` config files, scanning for DSNs in `.env` files and source code, and matching directory names. Only specify `<org>/<project>` when the CLI reports it can't detect the target or detects the wrong one.
 
@@ -50,15 +51,15 @@ The `sentry` CLI follows conventions from well-known tools — if you're familia
 
 The CLI uses semantic exit codes. Key ranges for agents:
 
-| Range | Meaning | Agent Action |
-|-------|---------|-------------|
-| 0 | Success | Proceed normally |
-| 10–19 | Auth error | Prompt user to run `sentry auth login` |
-| 20–29 | Input error | Check command arguments and retry |
-| 30–39 | API error | Retry or report to user |
-| 40–49 | Feature unavailable | Inform user about plan/settings |
-| 50–59 | Operation error | Report to user |
-| 60–69 | Command-specific | Check stderr for details |
+| Range | Meaning             | Agent Action                           |
+| ----- | ------------------- | -------------------------------------- |
+| 0     | Success             | Proceed normally                       |
+| 10–19 | Auth error          | Prompt user to run `sentry auth login` |
+| 20–29 | Input error         | Check command arguments and retry      |
+| 30–39 | API error           | Retry or report to user                |
+| 40–49 | Feature unavailable | Inform user about plan/settings        |
+| 50–59 | Operation error     | Report to user                         |
+| 60–69 | Command-specific    | Check stderr for details               |
 
 See [Exit Codes](/exit-codes/) for the complete reference.
 
@@ -139,6 +140,7 @@ sentry release deploy my-org/1.0.0 production
 ```
 
 **Key details:**
+
 - The positional is `<org-slug>/<version>`. In `sentry release create sentry/1.0.0`, `sentry` is the org and `1.0.0` is the version — the slash separates org from version, it is not part of the version string.
 - The **version** must match the `release` value in `Sentry.init()`. If your SDK uses `"1.0.0"`, the command must use `org/1.0.0`.
 - `--auto` requires a Sentry repository integration (GitHub/GitLab/Bitbucket) **and** a local git checkout. It matches your `origin` remote against Sentry's repo list. Without a checkout, use `--local`.
@@ -160,22 +162,22 @@ Sentry dashboards use a **6-column grid**. When adding widgets, aim to fill comp
 
 Display types with default sizes:
 
-| Display Type | Width | Height | Category | Notes |
-|---|---|---|---|---|
-| `big_number` | 2 | 1 | common | Compact KPI — place 3 per row (2+2+2=6) |
-| `line` | 3 | 2 | common | Half-width chart — place 2 per row (3+3=6) |
-| `area` | 3 | 2 | common | Half-width chart — place 2 per row |
-| `bar` | 3 | 2 | common | Half-width chart — place 2 per row |
-| `table` | 6 | 2 | common | Full-width — always takes its own row |
-| `stacked_area` | 3 | 2 | specialized | Stacked area chart |
-| `top_n` | 3 | 2 | specialized | Top N ranked list |
-| `categorical_bar` | 3 | 2 | specialized | Categorical bar chart |
-| `text` | 3 | 2 | specialized | Static text/markdown widget |
-| `details` | 3 | 2 | internal | Detail view |
-| `wheel` | 3 | 2 | internal | Pie/wheel chart |
-| `rage_and_dead_clicks` | 3 | 2 | internal | Rage/dead click visualization |
-| `server_tree` | 3 | 2 | internal | Hierarchical tree display |
-| `agents_traces_table` | 3 | 2 | internal | Agents traces table |
+| Display Type           | Width | Height | Category    | Notes                                      |
+| ---------------------- | ----- | ------ | ----------- | ------------------------------------------ |
+| `big_number`           | 2     | 1      | common      | Compact KPI — place 3 per row (2+2+2=6)    |
+| `line`                 | 3     | 2      | common      | Half-width chart — place 2 per row (3+3=6) |
+| `area`                 | 3     | 2      | common      | Half-width chart — place 2 per row         |
+| `bar`                  | 3     | 2      | common      | Half-width chart — place 2 per row         |
+| `table`                | 6     | 2      | common      | Full-width — always takes its own row      |
+| `stacked_area`         | 3     | 2      | specialized | Stacked area chart                         |
+| `top_n`                | 3     | 2      | specialized | Top N ranked list                          |
+| `categorical_bar`      | 3     | 2      | specialized | Categorical bar chart                      |
+| `text`                 | 3     | 2      | specialized | Static text/markdown widget                |
+| `details`              | 3     | 2      | internal    | Detail view                                |
+| `wheel`                | 3     | 2      | internal    | Pie/wheel chart                            |
+| `rage_and_dead_clicks` | 3     | 2      | internal    | Rage/dead click visualization              |
+| `server_tree`          | 3     | 2      | internal    | Hierarchical tree display                  |
+| `agents_traces_table`  | 3     | 2      | internal    | Agents traces table                        |
 
 Use **common** types for general dashboards. Use **specialized** only when specifically requested. Avoid **internal** types unless the user explicitly asks.
 
@@ -243,6 +245,7 @@ When querying the Events API (directly or via `sentry api`), valid dataset value
 - **Confusing `--query` syntax**: The `--query` flag uses Sentry search syntax (e.g., `is:unresolved`, `assigned:me`), not free text search.
 - **Not using `--web`**: View commands support `-w`/`--web` to open the resource in the browser — useful for sharing links.
 - **Fetching API schemas instead of using the CLI**: Prefer `sentry schema` to browse the API and `sentry api` to make requests — the CLI handles authentication and endpoint resolution, so there's rarely a need to download OpenAPI specs separately.
+- **Fetching event details when the issue title is self-explanatory**: The error type, message, and culprit from `sentry issue view` often contain the full root cause. Don't spend turns parsing raw event payloads via `sentry api` or `sentry event view` unless you need request-level context (headers, params, user info) that the issue summary doesn't provide.
 - **Release version mismatch**: The `org/version` positional is `<org-slug>/<version>`, where `org/` is the org, not part of the version. `sentry release create sentry/1.0.0` creates version `1.0.0` in org `sentry`. If your `Sentry.init()` uses `release: "1.0.0"`, this is correct. Don't double-prefix like `sentry/myapp/1.0.0`.
 - **Running `set-commits --auto` without a git checkout**: `--auto` needs a local git repo to discover the origin remote URL and HEAD commit. In CI, ensure `actions/checkout` with `fetch-depth: 0` runs before `set-commits --auto`.
 - **Using `sentry api` when CLI commands suffice**: `sentry issue list --json` already includes `shortId`, `title`, `priority`, `level`, `status`, `permalink`, and other fields at the top level. Some fields like `count`, `userCount`, `firstSeen`, and `lastSeen` may be null depending on the issue. Use `--fields` to select specific fields and `--help` to see all available fields. Only fall back to `sentry api` for data the CLI doesn't expose.

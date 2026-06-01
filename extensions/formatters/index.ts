@@ -8,14 +8,12 @@
  * - Silent operation (console logging only)
  * - `/format` command: Check formatter status
  *
- * Configuration in ~/.pi/agent/settings.json or .pi/settings.json:
+ * Configuration in ~/.pi/agent/formatters.json or .pi/formatters.json:
  *
  * {
- *   "formatters": {
- *     "prettier": {
- *       "command": ["npx", "prettier", "--write", "$FILE"],
- *       "extensions": [".js", ".ts", ".json"]
- *     }
+ *   "prettier": {
+ *     "command": ["npx", "prettier", "--write", "$FILE"],
+ *     "extensions": [".js", ".ts", ".json"]
  *   }
  * }
  */

@@ -1,0 +1,35 @@
+{
+  "standardrb": {
+    "command": ["standardrb", "--fix", "$FILE"],
+    "extensions": [".rb", ".rake", ".gemspec", ".ru"]
+  },
+  "herb": {
+    "command": ["herb-format", "$FILE"],
+    "extensions": [".erb", ".html.erb"]
+  },
+  "prettier": {
+    "command": ["npx", "prettier", "--write", "$FILE"],
+    "extensions": [
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".cjs",
+      ".ts",
+      ".tsx",
+      ".mts",
+      ".cts",
+      ".html",
+      ".css",
+      ".scss",
+      ".json",
+      ".yaml",
+      ".yml",
+      ".md",
+      ".mdx"
+    ]
+  },
+  "shfmt": {
+    "command": ["shfmt", "-w", "$FILE"],
+    "extensions": [".sh", ".bash"]
+  }
+}

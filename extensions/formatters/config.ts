@@ -21,23 +21,19 @@ function loadSettingsFile(path: string): Record<string, unknown> {
 }
 
 /**
- * Load formatters configuration from global and project settings.
+ * Load formatters configuration from global and project config files.
  * Project settings override global settings.
  */
 export function loadConfig(cwd: string): FormattersConfig {
-  const globalPath = join(homedir(), ".pi", "agent", "settings.json");
-  const projectPath = join(cwd, ".pi", "settings.json");
+  const globalPath = join(homedir(), ".pi", "agent", "formatters.json");
+  const projectPath = join(cwd, ".pi", "formatters.json");
 
-  // Load settings files
-  const globalSettings = loadSettingsFile(globalPath);
-  const projectSettings = loadSettingsFile(projectPath);
-
-  // Extract formatters config from each
-  const globalFormatters = (globalSettings.formatters ?? {}) as Record<
+  // Load config files (top-level keys are formatter names)
+  const globalFormatters = loadSettingsFile(globalPath) as Record<
     string,
     FormatterConfig
   >;
-  const projectFormatters = (projectSettings.formatters ?? {}) as Record<
+  const projectFormatters = loadSettingsFile(projectPath) as Record<
     string,
     FormatterConfig
   >;

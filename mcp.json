@@ -1,5 +1,10 @@
 {
   "mcpServers": {
+    "mcpServers": {
+      "context-mode": {
+        "command": "context-mode"
+      }
+    },
     "raindrop": {
       "url": "https://api.raindrop.io/rest/v2/ai/mcp",
       "auth": "bearer",

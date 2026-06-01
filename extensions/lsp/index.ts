@@ -1,23 +1,21 @@
 /**
  * Pi LSP Extension
- * 
+ *
  * Provides Language Server Protocol integration for pi coding agent.
- * 
+ *
  * Features:
  * - `lsp` tool: Query code intelligence (diagnostics, definitions, references, etc.)
  * - Automatic diagnostics after edit/write operations
  * - `/lsp` command: Check server status
- * 
- * Configuration in ~/.pi/agent/settings.json or .pi/settings.json:
- * 
+ *
+ * Configuration in ~/.pi/agent/lsp.json or .pi/lsp.json:
+ *
  * {
- *   "lsp": {
- *     "servers": {
- *       "typescript": {
- *         "command": ["typescript-language-server", "--stdio"],
- *         "extensions": [".ts", ".tsx"],
- *         "rootPatterns": ["package.json", "tsconfig.json"]
- *       }
+ *   "servers": {
+ *     "typescript": {
+ *       "command": ["typescript-language-server", "--stdio"],
+ *       "extensions": [".ts", ".tsx"],
+ *       "rootPatterns": ["package.json", "tsconfig.json"]
  *     }
  *   }
  * }
@@ -29,7 +27,11 @@ import { StringEnum } from "@mariozechner/pi-ai";
 
 import { loadConfig } from "./config.js";
 import { LspManager } from "./manager.js";
-import { executeLspTool, formatDiagnostic, LSP_TOOL_DESCRIPTION } from "./tool.js";
+import {
+  executeLspTool,
+  formatDiagnostic,
+  LSP_TOOL_DESCRIPTION,
+} from "./tool.js";
 import { LSP_OPERATIONS, DiagnosticSeverity } from "./types.js";
 
 const MAX_DIAGNOSTICS_DISPLAY = 20;
@@ -80,30 +82,41 @@ export default function lspExtension(pi: ExtensionAPI) {
     label: "LSP",
     description: LSP_TOOL_DESCRIPTION,
     parameters: Type.Object({
-      operation: StringEnum([...LSP_OPERATIONS] as unknown as readonly string[] & { 0: string }, {
-        description: "The LSP operation to perform",
-      }),
+      operation: StringEnum(
+        [...LSP_OPERATIONS] as unknown as readonly string[] & { 0: string },
+        {
+          description: "The LSP operation to perform",
+        },
+      ),
       filePath: Type.String({
         description: "Path to the file (relative or absolute)",
       }),
-      line: Type.Optional(Type.Number({
-        description: "Line number (1-based, as shown in editors)",
-      })),
-      character: Type.Optional(Type.Number({
-        description: "Character offset (1-based, as shown in editors)",
-      })),
-      query: Type.Optional(Type.String({
-        description: "Search query (for workspaceSymbols operation)",
-      })),
+      line: Type.Optional(
+        Type.Number({
+          description: "Line number (1-based, as shown in editors)",
+        }),
+      ),
+      character: Type.Optional(
+        Type.Number({
+          description: "Character offset (1-based, as shown in editors)",
+        }),
+      ),
+      query: Type.Optional(
+        Type.String({
+          description: "Search query (for workspaceSymbols operation)",
+        }),
+      ),
     }),
 
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       if (!manager) {
         return {
-          content: [{
-            type: "text",
-            text: "No LSP servers configured. Add server config to settings.json.",
-          }],
+          content: [
+            {
+              type: "text",
+              text: "No LSP servers configured. Add server config to settings.json.",
+            },
+          ],
           details: { error: true },
         };
       }
@@ -111,13 +124,13 @@ export default function lspExtension(pi: ExtensionAPI) {
       const { output, title } = await executeLspTool(
         manager,
         {
-          operation: params.operation as typeof LSP_OPERATIONS[number],
+          operation: params.operation as (typeof LSP_OPERATIONS)[number],
           filePath: params.filePath,
           line: params.line,
           character: params.character,
           query: params.query,
         },
-        ctx.cwd
+        ctx.cwd,
       );
 
       // Update status after operation (may have spawned a server)
@@ -154,14 +167,17 @@ export default function lspExtension(pi: ExtensionAPI) {
       const diagnostics = await manager.getDiagnostics(filePath);
 
       // Filter to errors only
-      const errors = diagnostics.filter((d) => d.severity === DiagnosticSeverity.Error);
+      const errors = diagnostics.filter(
+        (d) => d.severity === DiagnosticSeverity.Error,
+      );
 
       if (errors.length > 0) {
         const limited = errors.slice(0, MAX_DIAGNOSTICS_DISPLAY);
         const formatted = limited.map(formatDiagnostic).join("\n");
-        const suffix = errors.length > MAX_DIAGNOSTICS_DISPLAY
-          ? `\n... and ${errors.length - MAX_DIAGNOSTICS_DISPLAY} more`
-          : "";
+        const suffix =
+          errors.length > MAX_DIAGNOSTICS_DISPLAY
+            ? `\n... and ${errors.length - MAX_DIAGNOSTICS_DISPLAY} more`
+            : "";
 
         // Append diagnostics to the result
         const existingText = event.content
@@ -170,10 +186,12 @@ export default function lspExtension(pi: ExtensionAPI) {
           .join("\n");
 
         return {
-          content: [{
-            type: "text" as const,
-            text: `${existingText}\n\nLSP errors detected in this file, please fix:\n${formatted}${suffix}`,
-          }],
+          content: [
+            {
+              type: "text" as const,
+              text: `${existingText}\n\nLSP errors detected in this file, please fix:\n${formatted}${suffix}`,
+            },
+          ],
         };
       }
     } catch {
@@ -194,7 +212,10 @@ export default function lspExtension(pi: ExtensionAPI) {
       const status = manager.status();
 
       if (status.length === 0) {
-        ctx.ui.notify("No LSP servers connected (they start on first file access)", "info");
+        ctx.ui.notify(
+          "No LSP servers connected (they start on first file access)",
+          "info",
+        );
         return;
       }
 

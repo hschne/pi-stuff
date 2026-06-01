@@ -5,6 +5,7 @@
 Prefer using RESTful routes over inventing new action verbs or one-off controller actions.
 
 **Good**:
+
 ```ruby
 Rails.application.routes.draw do
   root "clouds#index"
@@ -32,11 +33,13 @@ end
 If a page is just another state of an existing resource, prefer the default REST actions (`new`, `show`, `edit`, `create`, `update`, `destroy`) instead of inventing custom route names.
 
 This matters especially for flows like:
+
 - “check your email” after submitting a sign-in form
 - confirmation/result pages
 - stateful setup screens
 
 **Good**:
+
 ```ruby
 namespace :sessions do
   resource :passwordless, only: %i[new show edit create]
@@ -51,6 +54,7 @@ end
 ### Bad: custom collection/member actions for standard page states
 
 **Bad**:
+
 ```ruby
 namespace :sessions do
   resource :passwordless, only: %i[new edit create] do
@@ -60,11 +64,13 @@ end
 ```
 
 Why this is bad:
+
 - `sent` is not a business resource, just a page/state
 - Rails already gives you `show` for that
 - custom verbs make routes harder to guess and controllers less conventional
 
 Prefer:
+
 ```ruby
 namespace :sessions do
   resource :passwordless, only: %i[new show edit create]
@@ -76,6 +82,7 @@ end
 Avoid routing that forces one controller action and template to branch into totally different screens.
 
 **Bad**:
+
 ```ruby
 # controller
 redirect_to new_sessions_passwordless_path(email_hint: params[:email]), notice: "Sent"
@@ -89,12 +96,14 @@ redirect_to new_sessions_passwordless_path(email_hint: params[:email]), notice: 
 ```
 
 Why this is bad:
+
 - one route is pretending to be two pages
 - view behavior depends on flash/flags instead of the action being rendered
 - harder to reason about, test, and maintain
 - pushes screen/state concerns into incidental controller data
 
 Prefer:
+
 ```ruby
 # controller
 redirect_to sessions_passwordless_path(email_hint: params[:email])
@@ -105,6 +114,7 @@ redirect_to sessions_passwordless_path(email_hint: params[:email])
 ```
 
 Rule of thumb:
+
 - If the user sees a meaningfully different page, give it its own action/view.
 - First ask: can this be `show`/`edit`/`new` on the existing resource?
 - Only add custom actions when the action is truly outside the standard CRUD/state vocabulary.
@@ -126,3 +136,36 @@ resources :sources, except: %i[show] do
   end
 end
 ```
+
+## Format Constraints
+
+For HTML-only apps, reject non-HTML format requests with a `before_action` in `ApplicationController`, not route-level constraints.
+
+**Good:**
+
+```ruby
+class ApplicationController < ActionController::Base
+  before_action :ensure_html
+
+  private
+
+  def ensure_html
+    head :not_acceptable unless request.format.html?
+  end
+end
+```
+
+**Bad:**
+
+```ruby
+# config/routes.rb
+constraints format: :html do
+  resources :projects
+end
+```
+
+Why route constraints don't work:
+
+- `constraints format: :html` rejects requests with no explicit format, breaking tests and `*/*` requests
+- `direct` helpers raise `RuntimeError` inside `constraints` blocks
+- Returns 404 instead of the correct 406 Not Acceptable

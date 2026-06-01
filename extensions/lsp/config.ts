@@ -55,19 +55,11 @@ function loadSettingsFile(path: string): Record<string, unknown> {
 }
 
 /**
- * Extract LSP config from settings object.
+ * Extract LSP config from a config object.
+ * The file is unwrapped: top-level key is "servers".
  */
-function extractLspConfig(
-  settings: Record<string, unknown>,
-): Partial<LspConfig> {
-  const lsp = settings.lsp;
-
-  if (!lsp || typeof lsp !== "object") {
-    return {};
-  }
-
-  const lspObj = lsp as Record<string, unknown>;
-  const servers = lspObj.servers;
+function extractLspConfig(config: Record<string, unknown>): Partial<LspConfig> {
+  const servers = config.servers;
 
   if (!servers || typeof servers !== "object") {
     return {};
@@ -77,30 +69,35 @@ function extractLspConfig(
 }
 
 /**
- * Load LSP configuration from global and project settings.
+ * Load LSP configuration from global and project config files.
  * Project settings override global settings.
  */
 export function loadConfig(cwd: string): LspConfig {
-  const globalPath = join(homedir(), ".pi", "agent", "settings.json");
-  const projectPath = join(cwd, ".pi", "settings.json");
+  const globalPath = join(homedir(), ".pi", "agent", "lsp.json");
+  const projectPath = join(cwd, ".pi", "lsp.json");
 
-  // Load settings files
-  const globalSettings = loadSettingsFile(globalPath);
-  const projectSettings = loadSettingsFile(projectPath);
+  // Load config files (unwrapped: top-level key is "servers")
+  const globalConfig = loadSettingsFile(globalPath);
+  const projectConfig = loadSettingsFile(projectPath);
 
   // Extract LSP config from each
-  const globalLsp = extractLspConfig(globalSettings);
-  const projectLsp = extractLspConfig(projectSettings);
+  const globalLsp = extractLspConfig(globalConfig);
+  const projectLsp = extractLspConfig(projectConfig);
 
-  // Start with empty config
-  const baseConfig: LspConfig = { servers: {} };
-
-  // Merge global, then project
-  const merged = deepMerge(deepMerge(baseConfig, globalLsp), projectLsp);
+  // Merge server configs: project overrides global
+  const globalServers = (globalLsp.servers ?? {}) as Record<
+    string,
+    ServerConfig
+  >;
+  const projectServers = (projectLsp.servers ?? {}) as Record<
+    string,
+    ServerConfig
+  >;
+  const mergedServers = deepMerge(globalServers, projectServers);
 
   // Filter out disabled servers
   const activeServers: Record<string, ServerConfig> = {};
-  for (const [id, config] of Object.entries(merged.servers)) {
+  for (const [id, config] of Object.entries(mergedServers)) {
     if (!config.disabled) {
       activeServers[id] = config;
     }
