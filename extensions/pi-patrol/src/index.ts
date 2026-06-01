@@ -31,6 +31,12 @@ interface PatrolConfig {
   timeout: number;
 }
 
+interface CheckFailure {
+  command: string;
+  code: number;
+  output: string;
+}
+
 /**
  * Load patrol config from project or global location.
  * Returns null when no config file is found (patrol disabled).
@@ -55,15 +61,15 @@ function loadConfig(cwd: string): PatrolConfig | null | "invalid" {
     return "invalid";
   }
 
-  if (
-    parsed === null ||
-    typeof parsed !== "object" ||
-    !Array.isArray((parsed as Record<string, unknown>).commands)
-  ) {
+  if (parsed === null || typeof parsed !== "object") {
     return "invalid";
   }
 
   const raw = parsed as Record<string, unknown>;
+
+  if (!Array.isArray(raw.commands)) {
+    return "invalid";
+  }
 
   return {
     commands: raw.commands as string[],
@@ -72,9 +78,7 @@ function loadConfig(cwd: string): PatrolConfig | null | "invalid" {
   };
 }
 
-function formatFailures(
-  failures: { command: string; code: number; output: string }[],
-): string {
+function formatFailures(failures: CheckFailure[]): string {
   return failures
     .map(
       ({ command, code, output }) =>
@@ -83,16 +87,40 @@ function formatFailures(
     .join("\n\n---\n\n");
 }
 
+async function runChecks(
+  pi: ExtensionAPI,
+  config: PatrolConfig,
+  cwd: string,
+): Promise<CheckFailure[]> {
+  const failures: CheckFailure[] = [];
+
+  for (const command of config.commands) {
+    const result = await pi.exec("sh", ["-c", command], {
+      timeout: config.timeout,
+      cwd,
+    });
+    if (result.code !== 0) {
+      const output = [result.stdout, result.stderr]
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join("\n");
+      failures.push({ command, code: result.code, output });
+    }
+  }
+
+  return failures;
+}
+
 export default function patrolExtension(pi: ExtensionAPI) {
   let cwd = process.cwd();
-  let stopHookActive = false;
+  let retryAttempted = false;
 
   pi.on("session_start", (_event, ctx) => {
     cwd = ctx.cwd;
   });
 
-  pi.on("agent_start", () => {
-    stopHookActive = false;
+  pi.on("input", () => {
+    retryAttempted = false;
   });
 
   pi.on("agent_end", async (_event, ctx) => {
@@ -108,26 +136,12 @@ export default function patrolExtension(pi: ExtensionAPI) {
       return;
     }
 
-    const failures: { command: string; code: number; output: string }[] = [];
-
-    for (const command of config.commands) {
-      const result = await pi.exec("sh", ["-c", command], {
-        timeout: config.timeout,
-        cwd,
-      });
-      if (result.code !== 0) {
-        const output = [result.stdout, result.stderr]
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .join("\n");
-        failures.push({ command, code: result.code, output });
-      }
-    }
+    const failures = await runChecks(pi, config, cwd);
 
     if (failures.length === 0) return;
 
-    if (config.retry && !stopHookActive) {
-      stopHookActive = true;
+    if (config.retry && !retryAttempted) {
+      retryAttempted = true;
       pi.sendMessage(
         {
           customType: "pi-patrol",
@@ -136,14 +150,12 @@ export default function patrolExtension(pi: ExtensionAPI) {
         },
         { deliverAs: "followUp", triggerTurn: true },
       );
+    } else if (retryAttempted) {
+      // Retry exhausted — minimal notice only, must not trigger another turn
+      ctx.ui.notify("pi-patrol: checks still failing. Giving up.", "warning");
     } else {
-      const content = stopHookActive
-        ? "pi-patrol: checks still failing. Giving up."
-        : formatFailures(failures);
-      pi.sendMessage(
-        { customType: "pi-patrol", content, display: true },
-        { deliverAs: "followUp", triggerTurn: false },
-      );
+      // retry disabled — report failures, must not trigger another turn
+      ctx.ui.notify("pi-patrol: checks failed (retry disabled)", "warning");
     }
   });
 }

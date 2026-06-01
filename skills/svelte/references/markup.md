@@ -6,7 +6,21 @@ Conventions for templates, accessibility, and class handling.
 
 If a non-interactive wrapper listens to touch or pointer events only for event plumbing, add `role="presentation"`.
 
-Bad:
+**Good:**
+
+```svelte
+<div
+  ontouchmove={handleTouchMove}
+  role="presentation"
+  class={['fixed inset-x-0', isActive ? 'z-50' : 'z-10']}
+  style:top={topPosition}
+  style:overscroll-behavior="contain"
+>
+  {@render children()}
+</div>
+```
+
+**Bad:**
 
 ```svelte
 <div
@@ -14,44 +28,34 @@ Bad:
   class={`fixed left-0 right-0 ${isActive ? 'z-50' : 'z-10'}`}
   style="top: {topPosition}; overscroll-behavior: contain;"
 >
-  <slot />
+  {@render children()}
 </div>
 ```
 
-Good:
+## Conditional Classes
+
+Use the native `class={[...]}` array syntax (Svelte 5.16+, clsx built-in). Avoid `class:` directives — they can't handle special characters like Tailwind's `/` and don't work on components.
+
+**Good:**
 
 ```svelte
-<div
-  ontouchmove={handleTouchMove}
-  role="presentation"
-  class="fixed inset-x-0"
-  class:z-50={isActive}
-  class:z-10={!isActive}
-  style:top={topPosition}
-  style:overscroll-behavior="contain"
->
-  <slot />
-</div>
+<!-- Boolean toggle -->
+<div class={['btn', primary && 'btn-primary', disabled && 'btn-disabled']} />
+
+<!-- Either/or with ternary -->
+<p class={['text-sm', active ? 'text-base-content/70' : 'text-base-content/40']} />
+
+<!-- Works on components -->
+<Icon class={['h-4 w-4', selected && 'rotate-180']} />
 ```
 
-## Class Directives
-
-Prefer Svelte class directives over manually constructing class strings with JavaScript conditionals.
-
-Prefer:
+**Bad:**
 
 ```svelte
-<div
-  class="btn"
-  class:btn-primary={primary}
-  class:btn-disabled={disabled}
-/>
+<!-- String construction -->
+<div class={`btn ${primary ? 'btn-primary' : ''}`} />
+<div class={['btn', primary ? 'btn-primary' : ''].join(' ')} />
+
+<!-- class: directive — breaks with / chars, doesn't work on components -->
+<div class="btn" class:btn-primary={primary} />
 ```
-
-Over:
-
-```svelte
-<div class={`btn ${primary ? 'btn-primary' : ''} ${disabled ? 'btn-disabled' : ''}`} />
-```
-
-When using Tailwind or DaisyUI, keep stable classes in `class="..."` and toggle only the conditional pieces with `class:name={condition}`.

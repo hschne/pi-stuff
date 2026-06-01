@@ -2,5 +2,10 @@
   "name": "pi-patrol",
   "version": "0.1.0",
   "description": "Automatically runs project checks after each agent turn",
-  "type": "module"
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
 }
