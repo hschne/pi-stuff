@@ -19,11 +19,15 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { keyHint } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
 const DEFAULT_TIMEOUT = 15000;
+const COLLAPSED_LINES = 6;
+const CUSTOM_TYPE = "pi-patrol";
 
 interface PatrolConfig {
   commands: string[];
@@ -116,6 +120,58 @@ export default function patrolExtension(pi: ExtensionAPI) {
   let cwd = process.cwd();
   let retryAttempted = false;
 
+  // ── Custom message renderer (retry path only) ─────────────────────────────
+  // Only retry uses sendMessage (agent must see errors). Success/gave-up/no-retry
+  // use ctx.ui.notify which is agent-invisible.
+  //
+  // Note: sendMessage always enters the LLM conversation. The context event
+  // could filter it, but triggerTurn:false still triggers extra turns in
+  // practice, so ctx.ui.notify is the only truly silent display mechanism.
+
+  pi.registerMessageRenderer(CUSTOM_TYPE, (message, options, theme) => {
+    let payload: PatrolPayload;
+    try {
+      const raw = message.details ?? message.content;
+      payload =
+        typeof raw === "string" ? JSON.parse(raw) : (raw as PatrolPayload);
+    } catch {
+      return new Text(String(message.content), 1, 0);
+    }
+
+    const { total, failed, failures } = payload;
+
+    const header = theme.fg(
+      "warning",
+      `✗ pi-patrol: ${failed}/${total} checks failed — retrying`,
+    );
+
+    const commandLines = failures.map((f) =>
+      theme.fg("warning", `  ✗ ${f.command} (exit ${f.code})`),
+    );
+
+    const detailLines = failures.flatMap((f) =>
+      f.output
+        ? f.output.split("\n").map((line) => theme.fg("dim", `    ${line}`))
+        : [],
+    );
+
+    const allLines = [header, ...commandLines, ...detailLines];
+
+    if (!options.expanded && allLines.length > COLLAPSED_LINES) {
+      const visible = allLines.slice(0, COLLAPSED_LINES);
+      const remaining = allLines.length - COLLAPSED_LINES;
+      visible.push(
+        theme.fg(
+          "muted",
+          `  … ${remaining} more lines (${keyHint("app.tools.expand", "to expand")})`,
+        ),
+      );
+      return new Text(visible.join("\n"), 1, 0);
+    }
+
+    return new Text(allLines.join("\n"), 1, 0);
+  });
+
   // ── Event handlers ────────────────────────────────────────────────────────
 
   pi.on("session_start", (_event, ctx) => {
@@ -150,28 +206,27 @@ export default function patrolExtension(pi: ExtensionAPI) {
     // ── Retry: trigger a new agent turn ───────────────────────────────────
     if (config.retry && !retryAttempted) {
       retryAttempted = true;
-      ctx.ui.notify(
-        `✗ pi-patrol: ${failures.length}/${total} checks failed — retrying`,
-        "warning",
-      );
+      const payload: PatrolPayload = {
+        total,
+        failed: failures.length,
+        failures,
+      };
       pi.sendMessage(
         {
-          customType: "pi-patrol",
-          content: formatPayloadForAgent({ total, failed: failures.length, failures }),
-          display: false,
+          customType: CUSTOM_TYPE,
+          content: formatPayloadForAgent(payload),
+          details: JSON.stringify(payload),
+          display: true,
         },
         { deliverAs: "followUp", triggerTurn: true },
       );
       return;
     }
 
-    // ── Gave up or no retry: notify only (agent-invisible) ───────────────
+    // ── Gave up or no retry: agent-invisible notification ─────────────────
     const label = retryAttempted
       ? "checks still failing — giving up"
       : "checks failed";
-    ctx.ui.notify(
-      `✗ pi-patrol: ${failures.length}/${total} ${label}`,
-      "error",
-    );
+    ctx.ui.notify(`✗ pi-patrol: ${failures.length}/${total} ${label}`, "error");
   });
 }
