@@ -3,8 +3,8 @@
  *
  * Automatically runs project checks after each agent turn (agent_end).
  * When checks fail and retry is enabled, the agent gets one automatic repair
- * attempt. If it still fails, a short notice is shown and the user takes over.
- * When checks pass, patrol stays silent.
+ * attempt. If it still fails, a structured failure report is shown.
+ * When checks pass, a brief success line is shown.
  *
  * Configuration (first found wins, no merging):
  *   Project:  <cwd>/.pi/patrol.json
@@ -37,6 +37,12 @@ interface CheckFailure {
   output: string;
 }
 
+interface PatrolPayload {
+  total: number;
+  failed: number;
+  failures: CheckFailure[];
+}
+
 /**
  * Load patrol config from project or global location.
  * Returns null when no config file is found (patrol disabled).
@@ -61,15 +67,10 @@ function loadConfig(cwd: string): PatrolConfig | null | "invalid" {
     return "invalid";
   }
 
-  if (parsed === null || typeof parsed !== "object") {
-    return "invalid";
-  }
+  if (parsed === null || typeof parsed !== "object") return "invalid";
 
   const raw = parsed as Record<string, unknown>;
-
-  if (!Array.isArray(raw.commands)) {
-    return "invalid";
-  }
+  if (!Array.isArray(raw.commands)) return "invalid";
 
   return {
     commands: raw.commands as string[],
@@ -78,8 +79,8 @@ function loadConfig(cwd: string): PatrolConfig | null | "invalid" {
   };
 }
 
-function formatFailures(failures: CheckFailure[]): string {
-  return failures
+function formatPayloadForAgent(payload: PatrolPayload): string {
+  return payload.failures
     .map(
       ({ command, code, output }) =>
         `pi-patrol: \`${command}\` failed (exit ${code}). Fix the errors below, then continue.\n\n${output}`,
@@ -115,6 +116,8 @@ export default function patrolExtension(pi: ExtensionAPI) {
   let cwd = process.cwd();
   let retryAttempted = false;
 
+  // ── Event handlers ────────────────────────────────────────────────────────
+
   pi.on("session_start", (_event, ctx) => {
     cwd = ctx.cwd;
   });
@@ -127,7 +130,6 @@ export default function patrolExtension(pi: ExtensionAPI) {
     const config = loadConfig(cwd);
 
     if (config === null) return;
-
     if (config === "invalid") {
       ctx.ui.notify(
         "pi-patrol: invalid config — check .pi/patrol.json or ~/.pi/agent/patrol.json",
@@ -137,25 +139,39 @@ export default function patrolExtension(pi: ExtensionAPI) {
     }
 
     const failures = await runChecks(pi, config, cwd);
+    const total = config.commands.length;
 
-    if (failures.length === 0) return;
+    // ── Success ───────────────────────────────────────────────────────────
+    if (failures.length === 0) {
+      ctx.ui.notify(`✓ pi-patrol: ${total}/${total} checks passed`, "info");
+      return;
+    }
 
+    // ── Retry: trigger a new agent turn ───────────────────────────────────
     if (config.retry && !retryAttempted) {
       retryAttempted = true;
+      ctx.ui.notify(
+        `✗ pi-patrol: ${failures.length}/${total} checks failed — retrying`,
+        "warning",
+      );
       pi.sendMessage(
         {
           customType: "pi-patrol",
-          content: formatFailures(failures),
-          display: true,
+          content: formatPayloadForAgent({ total, failed: failures.length, failures }),
+          display: false,
         },
         { deliverAs: "followUp", triggerTurn: true },
       );
-    } else if (retryAttempted) {
-      // Retry exhausted — minimal notice only, must not trigger another turn
-      ctx.ui.notify("pi-patrol: checks still failing. Giving up.", "warning");
-    } else {
-      // retry disabled — report failures, must not trigger another turn
-      ctx.ui.notify("pi-patrol: checks failed (retry disabled)", "warning");
+      return;
     }
+
+    // ── Gave up or no retry: notify only (agent-invisible) ───────────────
+    const label = retryAttempted
+      ? "checks still failing — giving up"
+      : "checks failed";
+    ctx.ui.notify(
+      `✗ pi-patrol: ${failures.length}/${total} ${label}`,
+      "error",
+    );
   });
 }
