@@ -1,150 +1,284 @@
 # Skill Authoring Guide
 
+How to write effective, concise skills.
+
 ## About Skills
 
-Skills are modular, self-contained packages that extend the agent's capabilities by providing
-specialized knowledge, workflows, and tools. Think of them as "onboarding guides" for specific
-domains or tasks—they transform the agent from a general-purpose agent into a specialized agent
-equipped with procedural knowledge that no model can fully possess.
+Skills are modular packages that extend the agent with specialized knowledge, workflows, and tools. They transform a general-purpose agent into a domain specialist equipped with procedural knowledge no model fully possesses.
 
-### What Skills Provide
+Skills provide:
 
-1. Specialized workflows - Multi-step procedures for specific domains
-2. Tool integrations - Instructions for working with specific file formats or APIs
-3. Domain expertise - Company-specific knowledge, schemas, business logic
-4. Bundled resources - Scripts, references, and assets for complex and repetitive tasks
+- **Specialized workflows** — multi-step procedures for specific domains
+- **Tool integrations** — instructions for working with specific formats or APIs
+- **Domain expertise** — company-specific knowledge, schemas, business logic
+- **Bundled resources** — scripts, references, and assets for complex tasks
 
-## Core Principles
+## Frontmatter
 
-### Concise is Key
-
-The context window is a public good. Skills share the context window with everything else the agent needs: system prompt, conversation history, other Skills' metadata, and the actual user request.
-
-**Default assumption: the agent is already very smart.** Only add context the agent doesn't already have. Challenge each piece of information: "Does the agent really need this explanation?" and "Does this paragraph justify its token cost?"
-
-Prefer concise examples over verbose explanations.
-
-### Set Appropriate Degrees of Freedom
-
-Match the level of specificity to the task's fragility and variability:
-
-**High freedom (text-based instructions)**: Use when multiple approaches are valid, decisions depend on context, or heuristics guide the approach.
-
-**Medium freedom (pseudocode or scripts with parameters)**: Use when a preferred pattern exists, some variation is acceptable, or configuration affects behavior.
-
-**Low freedom (specific scripts, few parameters)**: Use when operations are fragile and error-prone, consistency is critical, or a specific sequence must be followed.
-
-### Anatomy of a Skill
-
-```
-skill-name/
-├── SKILL.md (required)
-│   ├── YAML frontmatter metadata (required)
-│   │   ├── name: (required)
-│   │   └── description: (required)
-│   └── Markdown instructions (required)
-└── Bundled Resources (optional)
-    ├── scripts/          - Executable code (Python/Bash/etc.)
-    ├── references/       - Documentation loaded into context as needed
-    └── assets/           - Files used in output (templates, icons, fonts, etc.)
-```
-
-#### Scripts (`scripts/`)
-
-Executable code for tasks that require deterministic reliability or are repeatedly rewritten.
-
-- Include when the same code is being rewritten repeatedly or deterministic reliability is needed
-- Token efficient, deterministic, may be executed without loading into context
-
-#### References (`references/`)
-
-Documentation intended to be loaded as needed into context.
-
-- Use for database schemas, API docs, domain knowledge, company policies, detailed workflow guides
-- Keeps SKILL.md lean, loaded only when needed
-- If files are large (>10k words), include grep search patterns in SKILL.md
-- Information should live in either SKILL.md or references, not both
-
-#### Assets (`assets/`)
-
-Files not intended to be loaded into context, but used in the output the agent produces.
-
-- Templates, images, icons, boilerplate code, fonts, sample documents
-
-### Progressive Disclosure
-
-Skills use a three-level loading system:
-
-1. **Metadata (name + description)** - Always in context (~100 words)
-2. **SKILL.md body** - When skill triggers (<5k words)
-3. **Bundled resources** - As needed by the agent
-
-Keep SKILL.md body under 500 lines. Split content into separate files when approaching this limit. Reference split-out files clearly from SKILL.md.
-
-**Pattern 1: High-level guide with references**
-
-```markdown
-# PDF Processing
-
-## Quick start
-
-[code example]
-
-## Advanced features
-
-- **Form filling**: See [FORMS.md](references/FORMS.md)
-- **API reference**: See [REFERENCE.md](references/REFERENCE.md)
-```
-
-**Pattern 2: Domain-specific organization**
-
-```
-bigquery-skill/
-├── SKILL.md (overview and navigation)
-└── references/
-    ├── finance.md
-    ├── sales.md
-    └── product.md
-```
-
-## Writing Guidelines
-
-### Frontmatter
+Every `SKILL.md` starts with YAML frontmatter:
 
 ```yaml
 ---
-name: skill-name
-description: "What the skill does and when to use it. Include triggers here — the body is only loaded after triggering."
+name: my-skill
+description: "What it does and when to use it. Include all triggers here."
 ---
 ```
 
-- `name`: lowercase, hyphens only
-- `description`: primary triggering mechanism — include all "when to use" information here
+Rules:
 
-### Body
+- `name`: lowercase letters, digits, and hyphens only. No leading/trailing hyphens, no consecutive hyphens. Max 64 characters.
+- `name`: specific and descriptive — not `helper` or `utils`
+- `description`: the primary trigger mechanism. Include both what the skill does AND when to use it. All "when to use" info goes here, not in the body.
+- `description`: max 1024 characters. No angle brackets.
+- `description`: write in imperative form — "Use when…" not "This skill helps with…"
+- `description`: be slightly pushy — skills tend to under-trigger. Include synonyms and alternate phrasings for the task.
 
-- Use imperative/infinitive form
-- Only include information the agent doesn't already have
-- Prefer concise examples over verbose explanations
+**Good description:**
 
-### Naming
+```
+Create new skills, improve existing skills, and measure skill effectiveness
+with evals. Use when users want to create a skill from scratch, edit or optimize
+an existing skill, run evals to test a skill, or turn a conversation workflow
+into a reusable skill.
+```
 
-- Lowercase letters, digits, and hyphens only
-- Prefer short, verb-led phrases
-- Namespace by tool when it improves clarity (e.g., `gh-address-comments`)
-- Name the skill folder exactly after the skill name
+**Bad description:**
 
-### What to NOT Include
+```
+A skill for creating skills.
+```
 
-Do not create extraneous files: README.md, INSTALLATION_GUIDE.md, QUICK_REFERENCE.md, CHANGELOG.md, etc.
+## SKILL.md Structure
+
+Use this structure unless there's a clear reason not to:
+
+```markdown
+# Skill Name
+
+One short sentence explaining what the skill is for.
+
+## Core Rules
+
+- Short, durable rule
+- Short, durable rule
+
+## Workflow
+
+1. Read the relevant reference(s)
+2. Execute the task
+3. Validate the result
+4. Iterate until checks pass
+
+## References
+
+Read the reference that matches the current task:
+
+| Topic   | When to Read     | Reference                      |
+| ------- | ---------------- | ------------------------------ |
+| <topic> | <selection hint> | [<name>](references/<file>.md) |
+```
+
+## Writing Principles
+
+### Be Concise
+
+The context window is a shared resource. Only include domain knowledge, constraints, file locations, workflows, and conventions the agent doesn't already know.
+
+**Good:**
+
+```md
+- Run `bin/rails test` after controller changes.
+```
+
+**Bad:**
+
+```md
+- Rails applications usually have tests, and tests are important because they
+  help catch regressions, so after changing controllers you should consider
+  running tests.
+```
+
+### Explain the Why
+
+Explain reasoning so the agent generalizes to new situations. If you find yourself writing ALWAYS or NEVER in caps, reframe as reasoning.
+
+**Good:**
+
+```md
+Use `respond_to` blocks because they support both HTML and Turbo Stream
+responses, letting the same action handle full-page and partial updates.
+```
+
+**Bad:**
+
+```md
+ALWAYS use respond_to blocks. NEVER render turbo_stream inline.
+```
+
+### Use Commands, Not Wishes
+
+Instructions without verification commands are suggestions. Include the exact command to run and the expected exit condition.
+
+**Good:**
+
+```md
+After changing migrations:
+
+1. Run `bin/rails db:migrate`
+2. Run `bin/rails db:rollback` and re-migrate to verify reversibility
+3. Check that `db/schema.rb` diff looks correct
+```
+
+**Bad:**
+
+```md
+Handle migrations carefully and make sure they work.
+```
+
+### Set the Right Degree of Freedom
+
+- **High freedom** — style guidance, heuristics, multiple valid approaches
+- **Medium freedom** — preferred patterns with some adaptation
+- **Low freedom** — fragile, order-dependent, or destructive operations (use explicit numbered steps)
+
+### Front-Load Critical Content
+
+Attention follows a U-curve: strong at the top and bottom, weak in the middle. Put the most important rules and commands early. Style preferences go last.
+
+### Organize by Task, Not Category
+
+Organize sections by what the user is doing ("When writing tests…", "When deploying…") rather than by abstract category ("Style", "Testing", "Deployment"). The "When…" prefix maps to how agents reason about task context.
+
+### Use Consistent Terminology
+
+Pick one term per concept and reuse it. Don't alternate between "test", "spec", and "check" for the same thing.
+
+### Use Durable Language
+
+Avoid time-sensitive instructions unless explicitly historical. Prefer stable conventions over commentary about trends.
+
+## Pattern / Anti-Pattern Format
+
+When documenting conventions, prefer paired examples:
+
+````md
+## Turbo Stream Responses
+
+**Good:**
+
+```ruby
+def create
+  @record = Record.create!(record_params)
+  respond_to do |format|
+    format.html { redirect_to records_path }
+    format.turbo_stream
+  end
+end
+```
+
+**Bad:**
+
+```ruby
+def create
+  @record = Record.create!(record_params)
+  render turbo_stream: turbo_stream.append("records", partial: "records/record", locals: { record: @record })
+end
+```
+````
+
+Add a short "why" only when it helps the agent choose correctly.
+
+## Progressive Disclosure
+
+Skills use a three-level loading system:
+
+1. **Metadata** (name + description) — always in context (~100 words)
+2. **SKILL.md body** — loaded when skill triggers (<500 lines)
+3. **Bundled resources** — loaded as needed (unlimited)
+
+Keep SKILL.md under 500 lines. When approaching this limit, split content into reference files and link them clearly from SKILL.md.
+
+Rules for references:
+
+- One level deep from SKILL.md — no chains like `SKILL.md → guide.md → more-guide.md`
+- Information lives in either SKILL.md or a reference, not both
+- For large reference files (>300 lines), add a table of contents at the top
+- Use descriptive file names
+
+## Reference Tables
+
+Always present references as tables with a lead-in sentence:
+
+```md
+## References
+
+Read the reference that matches the current task:
+
+| Topic   | When to Read     | Reference                      |
+| ------- | ---------------- | ------------------------------ |
+| <topic> | <selection hint> | [<name>](references/<file>.md) |
+```
+
+The second column helps the agent decide which reference to read. Name it based on what's most useful:
+
+- **When to Read** — general purpose
+- **Path** — for framework skills where file paths signal which reference applies
+- **Usage** — when the agent chooses based on commands or capabilities
+
+## Scripts and Assets
+
+### Scripts (`scripts/`)
+
+Executable code for deterministic or repeatedly-needed tasks.
+
+- Include when the same code gets rewritten across invocations
+- Token-efficient — may be executed without loading into context
+- Handle errors inside the script, don't punt to the agent
+- Document dependencies
+- Run scripts before shipping to verify they work
+
+### References (`references/`)
+
+Documentation loaded into context on demand.
+
+- Database schemas, API docs, domain knowledge, workflow guides
+- If files are large (>10k words), include grep search patterns in SKILL.md
+
+### Assets (`assets/`)
+
+Files used in output, not loaded into context.
+
+- Templates, images, icons, boilerplate code, fonts
 
 ## Anti-Patterns
 
 Avoid:
 
 - Vague names like `helper` or `utils`
-- First-person descriptions like `I can help...`
+- First-person descriptions like `I can help…`
 - Bloated SKILL.md files that should be split into references
 - Nested references several files deep
 - Offering many equivalent options without guidance
+- Prose paragraphs without actionable commands
+- Ambiguous directives ("be careful", "where possible")
+- Contradictory rules without explicit priority ordering
+- Style guides without enforcement commands (linter, formatter)
 - Undocumented magic values or unexplained scripts
+- Extraneous files (README.md, CHANGELOG.md, INSTALLATION_GUIDE.md)
+
+## Checklist
+
+Before finishing a skill, verify:
+
+- [ ] Frontmatter has valid `name` and `description`
+- [ ] `description` says what the skill does AND when to use it
+- [ ] `description` is under 1024 characters
+- [ ] SKILL.md is under 500 lines
+- [ ] Long details moved into reference files (one level deep)
+- [ ] References use a lead-in sentence plus a 3-column table
+- [ ] Critical rules appear early in the file (front-loaded)
+- [ ] Key conventions include good/bad examples where useful
+- [ ] Workflow includes verification commands with expected outcomes
+- [ ] Terminology is consistent throughout
+- [ ] Scripts run successfully before shipping
+- [ ] The skill has been exercised on real tasks
