@@ -10,13 +10,12 @@ Use hk as the git-hook/file-selection layer and keep project task definitions as
 ## Core Rules
 
 - Prefer `hk.pkl` for hook orchestration; do not keep old `.git/hooks/pre-commit` shims or duplicate pre-commit/mise wrappers once hk owns the hook.
-- In Hans's projects, prefer global mise tools/config (`~/.config/mise/config.toml`) over adding project-local `[tools]`, unless the project needs pinned versions.
+- Prefer global mise tools/config (`~/.config/mise/config.toml`) over adding project-local `[tools]`, unless the project needs pinned versions.
 - When existing mise tasks already define lint/fix commands, call those tasks from `hk.pkl` instead of duplicating command lines.
 - If no project task exists for a tool, prefer hk `Builtins` before inventing custom shell snippets; builtins are transparent Pkl configs, not downloaded hook repos.
 - Keep Pkl readable: inline values used once; only introduce `local` variables for reused mappings or genuinely shared values. Name reusable linter mappings `linters`.
 - Keep `check` commands read-only and put mutations in `fix`; hk parallelizes checks and uses locks around fixes.
 - Prefer autofix in `pre-commit` when requested: `fix = true`, `stash = "git"`, and let hk stage fixed files by default.
-- Check local agent/tool configs that invoke old hooks, especially `.pi/patrol.json`.
 
 ## Workflow
 

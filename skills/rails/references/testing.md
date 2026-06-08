@@ -23,6 +23,22 @@ test/controllers/votes_controller_test.rb  # ✓ tests VotesController
 test/models/entry_test.rb                  # ✓ tests Entry model
 ```
 
+**Never write tests for concerns.** A concern has no independent existence — its
+behavior is exercised through the model that includes it. Test it in that model's
+test file, never in a `test/models/concerns/...` file.
+
+**Bad:**
+
+```bash
+test/models/concerns/entry/feedable_test.rb   # ✗ concern test
+```
+
+**Good:**
+
+```bash
+test/models/entry_test.rb   # ✓ for_feed (from Entry::Feedable) tested here
+```
+
 ## Model Tests: Logic & Validations
 
 ```ruby

@@ -157,6 +157,13 @@ end
 - Any complex calculation
 - Anything reusable
 
+**When NOT to extract:**
+
+Do not extract a concern, class, or method that is only used in one other place. A
+concern included by a single model, or a helper called from a single caller, adds
+indirection without reuse. Inline it at the call site and extract later once a
+second caller actually appears.
+
 **How to structure:**
 
 ```ruby
