@@ -1,7 +1,11 @@
 /**
  * pi-patrol Extension
  *
- * Automatically runs project checks after each agent turn (agent_end).
+ * Automatically runs project checks after each agent turn (agent_end) — but
+ * only when the agent actually modified files during the turn. File changes are
+ * detected via successful `edit`/`write` tool calls, so question-answering or
+ * read-only turns skip the checks entirely (no wasted command runs).
+ *
  * When checks fail and retry is enabled, the agent gets one automatic repair
  * attempt. If it still fails, a structured failure report is shown.
  * When checks pass, a brief success line is shown.
@@ -116,9 +120,13 @@ async function runChecks(
   return failures;
 }
 
+// Tools whose successful execution means the agent changed files on disk.
+const MUTATING_TOOLS = new Set(["edit", "write"]);
+
 export default function patrolExtension(pi: ExtensionAPI) {
   let cwd = process.cwd();
   let retryAttempted = false;
+  let filesChanged = false;
 
   // ── Custom message renderer (retry path only) ─────────────────────────────
   // Only retry uses sendMessage (agent must see errors). Success/gave-up/no-retry
@@ -180,9 +188,21 @@ export default function patrolExtension(pi: ExtensionAPI) {
 
   pi.on("input", () => {
     retryAttempted = false;
+    filesChanged = false;
+  });
+
+  // Track file mutations during the turn. The retry path delivers via
+  // sendMessage (not "input"), so this flag survives into the repair turn.
+  pi.on("tool_result", (event) => {
+    if (MUTATING_TOOLS.has(event.toolName) && !event.isError) {
+      filesChanged = true;
+    }
   });
 
   pi.on("agent_end", async (_event, ctx) => {
+    // Nothing was edited this turn — skip checks to avoid wasteful runs.
+    if (!filesChanged) return;
+
     const config = loadConfig(cwd);
 
     if (config === null) return;
