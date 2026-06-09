@@ -16,6 +16,8 @@ import { parseFrontmatter } from "@mariozechner/pi-coding-agent";
 
 export const DEFAULT_CONFIG_NAME = "ralph";
 export const DEFAULT_MAX_ITERATIONS = 100;
+/** Default delegation vessel: the builtin pi-subagents "naked" delegate agent. */
+export const DEFAULT_AGENT = "delegate";
 /** Consecutive identical stop-check fingerprints before aborting as "stuck". */
 export const DEFAULT_NO_PROGRESS_LIMIT = 2;
 
@@ -35,6 +37,8 @@ export interface RalphConfig {
   dir: string;
   /** Task prompt body handed to each iteration. */
   body: string;
+  /** pi-subagents agent used as the delegation vessel (default: `delegate`). */
+  agent: string;
   model?: string;
   thinking?: string;
   skills?: string[];
@@ -184,6 +188,17 @@ export function loadConfig(cwd: string, rawName?: string): ConfigResult {
     return { ok: false, error: `${path}: ${stop.error}` };
   }
 
+  let agent = DEFAULT_AGENT;
+  if (frontmatter.agent !== undefined) {
+    if (typeof frontmatter.agent !== "string" || !frontmatter.agent.trim()) {
+      return {
+        ok: false,
+        error: `${path}: frontmatter \`agent\` must be a non-empty string`,
+      };
+    }
+    agent = frontmatter.agent.trim();
+  }
+
   let model: string | undefined;
   if (frontmatter.model !== undefined) {
     if (typeof frontmatter.model !== "string" || !frontmatter.model.trim()) {
@@ -243,6 +258,7 @@ export function loadConfig(cwd: string, rawName?: string): ConfigResult {
       model,
       thinking,
       skills: parseSkills(frontmatter.skills),
+      agent,
       maxIterations,
       noProgressLimit,
       stop,

@@ -49,8 +49,6 @@ export interface LoopResult {
   detail?: string;
 }
 
-const WORKER_AGENT = "ralph-worker";
-
 function formatStopLabel(config: RalphConfig): string {
   if (config.stop.script) return config.stop.script;
   const run = config.stop.run ?? "";
@@ -115,6 +113,7 @@ export async function runRalphLoop(
       name: config.name,
       stopLabel: formatStopLabel(config),
       maxIterations,
+      agent: config.agent,
       model,
       thinking,
       skills: config.skills,
@@ -167,7 +166,7 @@ export async function runRalphLoop(
 
       setStatus(i + 1, lastSummary, "worker");
       const params = buildIterationParams({
-        agent: WORKER_AGENT,
+        agent: config.agent,
         task: config.body,
         model: encodedModel,
         skills: config.skills,

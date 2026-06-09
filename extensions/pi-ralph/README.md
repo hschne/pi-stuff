@@ -24,9 +24,9 @@ Each pass of the loop:
 2. **No-progress guard** (automatic when the stop command prints to stdout): if
    the stdout "fingerprint" is byte-identical for `noProgressLimit` consecutive
    passes, abort — the worker is spinning without reducing the work.
-3. Delegate one iteration to a fresh-context `ralph-worker` subagent (via the
-   `pi-subagents` slash bridge), with the config's `model`, `thinking`, and
-   `skills` applied and the config body as the task.
+3. Delegate one iteration to a fresh-context subagent (via the `pi-subagents`
+   slash bridge), with the config's `model`, `thinking`, and `skills` applied and
+   the config body as the task.
 4. Repeat until done / no-progress / `maxIterations` / interrupt.
 
 Loop state lives in the **repo** (the stop script reads it), not in a sidecar
@@ -52,6 +52,7 @@ naturally from wherever the repo is.
 
 ```markdown
 ---
+agent: delegate # optional; pi-subagents delegation vessel (default: delegate)
 model: anthropic/claude-sonnet-4-6 # optional; defaults to session model
 thinking: medium # optional
 skills: implement-issue # optional; comma-separated, injected into worker
@@ -89,9 +90,18 @@ dependency on `pi-prompt-template-model`.
 
 ## Worker agent
 
-Iterations run as the `ralph-worker` agent (`~/.pi/agent/agents/ralph-worker.md`):
-a minimal, fresh-context worker whose system prompt is neutral so the config body
-(the task) drives behavior.
+The repo's config body **is** the prompt. It is handed as the task to a
+fresh-context pi-subagents agent (the "vessel"); the vessel's own system prompt
+stays neutral so the config drives behavior. No custom agent file is required.
+
+- Default vessel: the builtin **`delegate`** agent (generic, `inheritSkills:
+false`, `read/grep/find/ls/bash/edit/write`, inherits the parent model).
+- Override per config with `agent:` in frontmatter to point at any discoverable
+  agent, e.g. a project-specific `.pi/agents/my-worker.md`.
+
+pi-subagents requires a _named, discoverable_ agent — it has no inline-agent
+option and skips disabled agents — which is why `agent:` resolves to a real
+agent rather than an ad-hoc definition.
 
 ```
 

@@ -23,6 +23,7 @@ export interface RalphLoopStartDetails {
   name: string;
   stopLabel: string;
   maxIterations: number;
+  agent: string;
   model?: string;
   thinking?: string;
   skills?: string[];
@@ -85,7 +86,7 @@ function renderLoopStart(
   box.addChild(
     new Text(theme.fg("dim", `max iterations: ${details.maxIterations}`), 0, 0),
   );
-  const worker: string[] = [];
+  const worker: string[] = [details.agent];
   if (details.model) worker.push(details.model);
   if (details.thinking) worker.push(`thinking ${details.thinking}`);
   if (details.skills && details.skills.length > 0)
