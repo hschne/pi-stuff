@@ -1,0 +1,11 @@
+{
+  "name": "pi-ralph",
+  "version": "0.1.0",
+  "description": "Deterministic ralph loops: re-run a fresh subagent until a scriptable stop condition is met",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}
