@@ -82,6 +82,23 @@ test "${count}" -eq 0           # exit 0 when done
 A bare exit-code-only script (no stdout) skips the no-progress guard and relies
 on `maxIterations`.
 
+## Observability
+
+Each iteration renders two transcript entries:
+
+- A **live progress box** (`ralph-progress`) emitted the moment the iteration
+  starts. It updates in place as the worker streams — current tool (`→ edit
+log.txt`), tool count, tokens, and the last few lines of worker output — so you
+  always have an inkling of what the subagent is doing. It collapses once the
+  iteration finishes (and stays collapsed after a session reload).
+- A **final iteration box** (`ralph-event`) with the worker's summary, exit code,
+  and remaining stop-check fingerprint. This is the persisted record.
+
+The bottom status line also mirrors the current iteration and worker activity
+while a loop runs. Live updates use the same in-place render trick as
+pi-subagents' slash runs: a render-frame snapshot store (`live-state.ts`) keyed
+by iteration id, re-read by the renderer each frame.
+
 ## Dependencies
 
 Requires [`pi-subagents`](https://github.com/nicobailon/pi-subagents) — pi-ralph

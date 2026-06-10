@@ -11,6 +11,7 @@
  *   4. Repeat until done / no-progress / maxIterations / interrupt.
  */
 
+import { randomUUID } from "node:crypto";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -23,7 +24,13 @@ import {
   runIteration,
 } from "./delegation.js";
 import {
+  beginIteration,
+  finishIteration,
+  updateIteration,
+} from "./live-state.js";
+import {
   RALPH_EVENT_TYPE,
+  RALPH_PROGRESS_TYPE,
   type RalphEndReason,
   type RalphEventDetails,
 } from "./renderer.js";
@@ -173,6 +180,23 @@ export async function runRalphLoop(
         cwd: ctx.cwd,
       });
 
+      // Live in-progress box: emitted now (not after completion) so the user
+      // sees that this iteration is running and what the worker is doing.
+      const progressId = randomUUID();
+      beginIteration({
+        id: progressId,
+        name: config.name,
+        iteration: i + 1,
+        maxIterations,
+        stopSummary: lastSummary,
+      });
+      pi.sendMessage({
+        customType: RALPH_PROGRESS_TYPE,
+        content: `[${label} iter ${i + 1}/${maxIterations} running]`,
+        display: true,
+        details: { id: progressId },
+      });
+
       const outcome = await runIteration(
         pi,
         params,
@@ -181,6 +205,13 @@ export async function runRalphLoop(
           const progress: SlashAgentProgress | undefined = update.progress?.[0];
           const tool = update.currentTool ?? progress?.currentTool;
           const tools = update.toolCount ?? progress?.toolCount;
+          updateIteration(progressId, {
+            currentTool: tool,
+            currentToolArgs: progress?.currentToolArgs,
+            toolCount: tools,
+            tokens: progress?.tokens,
+            recentOutput: progress?.recentOutput,
+          });
           const workerLabel = [
             tool ? `→ ${tool}` : undefined,
             tools ? `${tools} tools` : undefined,
@@ -191,6 +222,8 @@ export async function runRalphLoop(
         },
       );
 
+      // Collapse the live box; the persisted iteration box below takes over.
+      finishIteration(progressId);
       completed += 1;
 
       emit(

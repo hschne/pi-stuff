@@ -11,6 +11,32 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Markdown, type MarkdownTheme } from "@mariozechner/pi-tui";
 
+type AssistantLike = {
+  role?: string;
+  stopReason?: string;
+  errorMessage?: string;
+};
+
+// Mirrors AgentSession._isRetryableError: errors the core auto-retries with
+// exponential backoff. We must stay silent for these until retries settle.
+const RETRYABLE_ERROR =
+  /overloaded|provider.?returned.?error|rate.?limit|too many requests|429|500|502|503|504|service.?unavailable|server.?error|internal.?error|network.?error|connection.?error|connection.?refused|connection.?lost|other side closed|fetch failed|upstream.?connect|reset before headers|socket hang up|ended without|http2 request did not get a response|timed? out|timeout|terminated|retry delay/i;
+
+// The core retries with exponential backoff (default 2s/4s/8s). The retry's
+// agent_start cancels the pending notification, so this window only needs to
+// outlast the gap between a failed agent_end and the next attempt starting.
+const RETRY_GRACE_MS = Number(process.env.PI_NOTIFY_RETRY_GRACE_MS) || 20000;
+
+const findLastAssistant = (
+  messages: Array<{ role?: string }>,
+): AssistantLike | undefined => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i] as AssistantLike;
+    if (message?.role === "assistant") return message;
+  }
+  return undefined;
+};
+
 const isTextPart = (part: unknown): part is { type: "text"; text: string } =>
   Boolean(
     part &&
@@ -95,11 +121,56 @@ export default function (pi: ExtensionAPI) {
     await pi.exec("notify-send", ["-t", "60000", "-u", urgency, title, body]);
   };
 
+  // Pending notification for a retryable error. Held back until we know whether
+  // the core auto-retries (agent_start fires -> cancel) or gives up (timer fires).
+  let pendingRetryTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const clearPending = (): void => {
+    if (pendingRetryTimer) {
+      clearTimeout(pendingRetryTimer);
+      pendingRetryTimer = undefined;
+    }
+  };
+
+  // A new agent loop starting while an error is pending means the core kicked
+  // off an auto-retry — suppress the intermediate error notification.
+  pi.on("agent_start", () => {
+    if (isSubagent) return;
+    clearPending();
+  });
+
   pi.on("agent_end", async (event) => {
     if (isSubagent) return;
 
-    const lastText = extractLastAssistantText(event.messages ?? []);
-    const body = formatNotification(lastText);
-    await sendNotification("π", body, "low");
+    const messages = event.messages ?? [];
+    const lastAssistant = findLastAssistant(messages);
+    const errorMessage =
+      lastAssistant?.stopReason === "error"
+        ? (lastAssistant.errorMessage ?? "")
+        : undefined;
+
+    // Retryable error: defer. If a retry starts it gets cancelled in
+    // agent_start; otherwise this fires once retries are exhausted.
+    if (errorMessage !== undefined && RETRYABLE_ERROR.test(errorMessage)) {
+      clearPending();
+      const body = formatNotification(`Failed: ${errorMessage}`);
+      pendingRetryTimer = setTimeout(() => {
+        pendingRetryTimer = undefined;
+        void sendNotification("π", body, "critical");
+      }, RETRY_GRACE_MS);
+      return;
+    }
+
+    // Success or non-retryable error: notify now and drop any pending retry.
+    clearPending();
+    const body =
+      errorMessage !== undefined
+        ? formatNotification(`Failed: ${errorMessage}`)
+        : formatNotification(extractLastAssistantText(messages));
+    await sendNotification(
+      "π",
+      body,
+      errorMessage !== undefined ? "critical" : "low",
+    );
   });
 }

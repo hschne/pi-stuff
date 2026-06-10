@@ -30,13 +30,19 @@ import {
   type LoopResult,
   runRalphLoop,
 } from "./loop.js";
-import { RALPH_EVENT_TYPE, renderRalphEvent } from "./renderer.js";
+import {
+  RALPH_EVENT_TYPE,
+  RALPH_PROGRESS_TYPE,
+  renderRalphEvent,
+  renderRalphProgressMessage,
+} from "./renderer.js";
 
 export default function ralphExtension(pi: ExtensionAPI) {
   let activeLoop: LoopHandle | undefined;
   let escUnsub: (() => void) | undefined;
 
   pi.registerMessageRenderer(RALPH_EVENT_TYPE, renderRalphEvent);
+  pi.registerMessageRenderer(RALPH_PROGRESS_TYPE, renderRalphProgressMessage);
 
   const installEscHandler = (ctx: ExtensionContext) => {
     if (!ctx.hasUI || escUnsub) return;

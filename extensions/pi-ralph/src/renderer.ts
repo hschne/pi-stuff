@@ -8,8 +8,14 @@ import type {
   Theme,
 } from "@mariozechner/pi-coding-agent";
 import { Box, Container, Spacer, Text } from "@mariozechner/pi-tui";
+import { getIterationState } from "./live-state.js";
 
 export const RALPH_EVENT_TYPE = "ralph-event";
+export const RALPH_PROGRESS_TYPE = "ralph-progress";
+
+export interface RalphProgressDetails {
+  id: string;
+}
 
 export type RalphEndReason =
   | "done"
@@ -203,6 +209,94 @@ function renderLoopEnd(details: RalphLoopEndDetails, theme: Theme): Container {
   container.addChild(new Spacer(1));
   container.addChild(box);
   return container;
+}
+
+/** Number of trailing worker-output lines to show in the live progress box. */
+const LIVE_OUTPUT_LINES = 3;
+
+/**
+ * Live, in-place progress box for the currently-running iteration. Re-reads the
+ * shared live-state store on every render frame and rebuilds when its version
+ * changes (same trick pi-subagents uses). Once the iteration is finished — or
+ * after a session reload, when the store is empty — it renders nothing so the
+ * persisted iteration box takes over.
+ */
+function renderRalphProgress(
+  details: RalphProgressDetails,
+  theme: Theme,
+): Container {
+  const container = new Container();
+  let lastVersion = -1;
+  let lastStatus: string | undefined;
+
+  const rebuild = () => {
+    container.clear();
+    const state = getIterationState(details.id);
+    if (!state || state.status !== "running") return;
+
+    const box = new Box(1, 1, (t: string) => theme.bg("toolPendingBg", t));
+    const spinner = theme.fg("accent", "\u2026");
+    const meta: string[] = [];
+    if (state.toolCount !== undefined) meta.push(`${state.toolCount} tools`);
+    const tok = formatTokens(state.tokens);
+    if (tok) meta.push(tok);
+    box.addChild(
+      new Text(
+        `${spinner} ${brand(theme, state.name)} | iter ${state.iteration}/${state.maxIterations} \u00b7 running${
+          meta.length > 0 ? ` \u00b7 ${meta.join(" \u00b7 ")}` : ""
+        }`,
+        0,
+        0,
+      ),
+    );
+    if (state.stopSummary)
+      box.addChild(
+        new Text(theme.fg("dim", `remaining: ${state.stopSummary}`), 0, 0),
+      );
+    if (state.currentTool) {
+      const args = state.currentToolArgs ? ` ${state.currentToolArgs}` : "";
+      box.addChild(
+        new Text(
+          theme.fg("accent", `\u2192 ${state.currentTool}${args}`),
+          0,
+          0,
+        ),
+      );
+    }
+    const lines = state.recentOutput
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(-LIVE_OUTPUT_LINES);
+    if (lines.length > 0) {
+      box.addChild(new Spacer(1));
+      box.addChild(new Text(theme.fg("toolOutput", lines.join("\n")), 0, 0));
+    }
+    container.addChild(new Spacer(1));
+    container.addChild(box);
+  };
+
+  container.render = (width: number): string[] => {
+    const state = getIterationState(details.id);
+    const version = state?.version ?? -1;
+    const status = state?.status;
+    if (version !== lastVersion || status !== lastStatus) {
+      lastVersion = version;
+      lastStatus = status;
+      rebuild();
+    }
+    return Container.prototype.render.call(container, width);
+  };
+  return container;
+}
+
+export function renderRalphProgressMessage(
+  message: { details?: RalphProgressDetails },
+  _options: MessageRenderOptions,
+  theme: Theme,
+) {
+  const details = message.details;
+  if (!details?.id) return new Container();
+  return renderRalphProgress(details, theme);
 }
 
 export function renderRalphEvent(
