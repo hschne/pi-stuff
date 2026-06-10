@@ -1,8 +1,9 @@
 {
   "quietStartup": true,
-  "lastChangelogVersion": "0.78.1",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5",
+  "defaultProjectTrust": "always",
+  "lastChangelogVersion": "0.79.1",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-4-6",
   "theme": "tokyo-night",
   "packages": [
     "npm:pi-mcp-adapter",
@@ -12,7 +13,7 @@
     "npm:pi-annotate",
     "npm:pi-rewind-hook"
   ],
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "high",
   "hideThinkingBlock": false,
   "enabledModels": [
     "anthropic/claude-opus-4-8",
