@@ -1,6 +1,6 @@
 ---
 name: rails
-description: Reusable Rails conventions for apps that favor Rails defaults. See references for models, controllers, data, testing, Hotwire, Inertia, routing, and i18n. Use this any time you read or write to a Rails app.
+description: Reusable Rails conventions for apps that favor Rails defaults. See references for architecture, models, controllers, data, testing, Hotwire, Inertia, routing, and i18n. Use this any time you read, write, refactor, or review architecture in a Rails app.
 ---
 
 # Rails
@@ -15,6 +15,7 @@ Invoke this skill when:
 - Writing or reviewing migrations and schema changes
 - Writing or refactoring Rails views
 - Deciding where logic belongs in a Rails app
+- Reviewing Rails architecture, layering, seams, and domain fit
 - Reviewing test structure, fixtures, or i18n usage
 
 ## Style Guide
@@ -32,19 +33,20 @@ Regardless of what you change these core principles always apply.
 
 Use the focused reference that matches the task:
 
-| Topic               | Path                                                | Reference                                                |
-| ------------------- | --------------------------------------------------- | -------------------------------------------------------- |
-| active record       | `app/models/**/*`, `app/policies/**/*`              | [active-record](references/active-record.md)             |
-| models              | `app/models/**/*`                                   | [models](references/models.md)                           |
-| controllers         | `app/controllers/**/*`                              | [controllers](references/controllers.md)                 |
-| policies            | `app/policies/**/*`                                 | [policies](references/policies.md)                       |
-| migrations and data | `db/migrate/**/*`, `db/schema.rb`, `db/seeds.rb`    | [migrations-and-data](references/migrations-and-data.md) |
-| testing             | `test/**/*`                                         | [testing](references/testing.md)                         |
-| views               | `app/views/**/*`                                    | [views](references/views.md)                             |
-| hotwire             | `app/views/**/*`, `aep/javascript/controllers/**/*` | [hotwire](references/hotwire.md)                         |
-| routing             | `config/routes.rb`                                  | [routing](references/routing.md)                         |
-| inertia             | `app/controllers/**/*`, `app/javascript/**/*`       | [inertia](references/inertia.md)                         |
-| i18n                | `config/locales/**/*`                               | [i18n](references/i18n.md)                               |
+| Topic               | Path                                                    | Reference                                                |
+| ------------------- | ------------------------------------------------------- | -------------------------------------------------------- |
+| architecture        | post-implementation review, layering, seams, domain fit | [architecture](references/architecture.md)               |
+| active record       | `app/models/**/*`, `app/policies/**/*`                  | [active-record](references/active-record.md)             |
+| models              | `app/models/**/*`                                       | [models](references/models.md)                           |
+| controllers         | `app/controllers/**/*`                                  | [controllers](references/controllers.md)                 |
+| policies            | `app/policies/**/*`                                     | [policies](references/policies.md)                       |
+| migrations and data | `db/migrate/**/*`, `db/schema.rb`, `db/seeds.rb`        | [migrations-and-data](references/migrations-and-data.md) |
+| testing             | `test/**/*`                                             | [testing](references/testing.md)                         |
+| views               | `app/views/**/*`                                        | [views](references/views.md)                             |
+| hotwire             | `app/views/**/*`, `aep/javascript/controllers/**/*`     | [hotwire](references/hotwire.md)                         |
+| routing             | `config/routes.rb`                                      | [routing](references/routing.md)                         |
+| inertia             | `app/controllers/**/*`, `app/javascript/**/*`           | [inertia](references/inertia.md)                         |
+| i18n                | `config/locales/**/*`                                   | [i18n](references/i18n.md)                               |
 
 ## Related Skills
 
