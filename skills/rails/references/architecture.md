@@ -23,6 +23,36 @@ While exploring Rails code, ask:
 - Where do names like `Manager`, `Processor`, `Handler`, `Helper`, or vague `Service` hide the domain concept?
 - Where is one model enforcing consistency rules for concepts that change independently?
 - Where does a job orchestrate a workflow cleanly, and where does it contain the business decision itself?
+- Where do two names mean the same thing, or one name means different things in different flows?
+- Which object owns each invariant, state transition, and side effect?
+- What is the smallest credible improvement that reduces leakage without reorganizing the whole app?
+
+## Evidence Before Findings
+
+Do not report architecture findings from vibes alone. Confirm structural claims by reading the actual code paths involved.
+
+For high-confidence findings, identify:
+
+- the entry point inspected;
+- the files and methods where the responsibility lives today;
+- the concrete risk created by that structure;
+- the smallest credible improvement.
+
+If code-level evidence does not support the concern, downgrade it to an open question or remove it.
+
+## Smallest Credible Improvement
+
+Prefer the smallest change that improves ownership, locality, or domain language. Good architecture work often starts with a rename, an explicit method, an adapter around an external system, or inlining a fake abstraction.
+
+Do not recommend splitting code into new contexts, engines, or large namespaces unless the business boundary is explicit enough to name. Do not treat every large model or namespace as a bounded context.
+
+Pattern choice must be justified by one of:
+
+- a domain invariant that needs a single owner;
+- an ownership conflict between flows or contexts;
+- repeated coordination that deserves one public interface;
+- foreign language leaking from an external system;
+- tests forced to cross too many implementation details.
 
 ## Rails Defaults First
 
@@ -84,6 +114,15 @@ A model is too broad when unrelated responsibilities collect on one Active Recor
 
 **Good extraction signal:** the extracted object has a domain name, hides real implementation detail, and gives callers a smaller interface.
 
+When a model owns a state transition, make that transition explicit. Do not let several controllers, jobs, or services update the same state columns directly.
+
+State ownership should be easy to say:
+
+```text
+Subscription owns cancellation state; billing jobs do not write cancellation columns directly.
+Reservation owns availability; invoicing reacts to completed reservations instead of mutating reservation state.
+```
+
 ## Controllers Should Not Know the Domain
 
 A controller action should read like HTTP coordination. If it explains the business process, the behavior is in the wrong place.
@@ -128,9 +167,31 @@ Use a namespaced PORO when:
 
 Inline it when it is single-use coordination that Rails already expresses clearly.
 
+Avoid extracting a service object that only moves code out of a controller or model without clarifying ownership. Moving code sideways is not architecture.
+
+## Domain Language and Boundaries
+
+Agree on business language before choosing models, services, or boundaries. Naming conflicts are architecture evidence.
+
+Look for:
+
+- synonyms used for one concept, like `Customer`, `Client`, and `Account`;
+- one word used for different concepts in different flows;
+- technical names that hide business meaning;
+- context-specific words leaking into unrelated areas.
+
+When a boundary problem appears, state the ownership direction:
+
+```text
+Billing owns invoice state; fulfillment must not update invoice columns.
+Catalog owns provider import vocabulary; products use internal product language.
+```
+
+A boundary is not proven by folder size. It is proven by distinct language, rules, ownership, or lifecycle.
+
 ## Concerns
 
-Concerns are for shared behavior with one clear responsibility. A concern included by one model is usually just an extracted private section with worse locality.
+Concerns are for shared behavior with one clear responsibility. A concern included by one model is usually just an extracted private section with worse locality. A concern that mixes auditing, notifications, emails, and external calls is several responsibilities hiding behind one include.
 
 Before keeping a concern, ask:
 
@@ -159,6 +220,8 @@ Poor callback uses:
 - causing behavior that callers cannot see from the public interface.
 
 If callback behavior matters to the domain, prefer an explicit method, job, or domain object with a name the business recognizes.
+
+A useful test: saving a record should not surprise callers with unrelated business side effects. If every save can send mail, call a provider, or mutate another aggregate, the workflow is hidden.
 
 ## External Systems and Foreign Language
 
@@ -200,3 +263,15 @@ When reviewing tests, ask:
 - Are there old tests for shallow modules that should disappear after a deeper interface exists?
 
 Prefer fewer tests through a stable, deeper interface over many tests that pin implementation details.
+
+## Refactoring Follow-Through
+
+Architecture review identifies candidates; refactoring changes behavior-preserving structure. When implementing a chosen refactor:
+
+- state the stable behavior that must not change;
+- add or identify characterization coverage before moving production code;
+- change one seam or ownership boundary at a time;
+- run focused tests after each step;
+- run the broader suite before declaring the refactor done.
+
+Do not mix behavior changes with structural refactors. If the behavior also needs to change, finish the structure-preserving move first, then make the behavior change with its own tests.
