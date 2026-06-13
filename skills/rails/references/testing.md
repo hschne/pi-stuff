@@ -116,6 +116,10 @@ class Identity::EmailsControllerTest < ActionDispatch::IntegrationTest
 
 Only put data in `setup` that is used by the **majority** of tests in the file. Data used by only one or two tests should be defined locally inside those tests.
 
+## Helper Methods
+
+Avoid helper methods that only hide simple object construction. Inline simple values such as `Map.new(...)` at the call site so each test shows its full setup. When a factory helper is useful for multi-step record creation, define it as a private method at the end of the test file, after all tests and non-factory helpers.
+
 **Bad:**
 
 ```ruby
