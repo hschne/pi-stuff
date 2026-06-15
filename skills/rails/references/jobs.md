@@ -46,6 +46,39 @@ end
 
 **Don't put complex logic in jobs.** Jobs are for orchestration. Model classes handle complexity.
 
+## External Services and Third-Party Calls
+
+Wrap an external API (geocoding, LLM, webhook) in a concept-named PORO in
+`app/models`, invoked behind a natural method on the owning model. Name it after the
+concept (`Geocoder`), never `*Service`/`.call`. Inject the client for stubbing,
+return a value object (not a raw hash), and let the job orchestrate the slow call.
+
+```ruby
+# Good: logic on the model, job just calls back into it
+class Entry < ApplicationRecord
+  def reverse_geocode!(geocoder: Geocoder.new)
+    self.address = geocoder.lookup(coordinate)  # Address value object, then persisted
+    save!
+  end
+end
+
+ReverseGeocodeJob.perform_later(entry)  # => entry.reverse_geocode!
+```
+
+```ruby
+# Bad: *Service suffix, procedural .call, raw hash, logic stranded in the job
+class ReverseGeocodingService
+  def self.call(lat, lng) = {city: ..., street: ...}
+end
+
+class ReverseGeocodeJob < ApplicationJob
+  def perform(entry)
+    result = ReverseGeocodingService.call(entry.latitude, entry.longitude)
+    entry.update!(city: result[:city], street: result[:street])
+  end
+end
+```
+
 ## Error Handling in Jobs
 
 ```ruby

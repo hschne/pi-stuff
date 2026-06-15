@@ -14,6 +14,7 @@ Create effective skills through an interview-driven, eval-backed workflow.
 - **Front-load critical content.** Attention follows a U-curve: strong at the top and bottom, weak in the middle. Put the most important rules first.
 - **Scripts over repeated work.** If every test run reinvents the same helper, bundle it as a script.
 - **Iterate with evidence.** Draft → test → review → improve. Never ship a skill without exercising it.
+- **Keep skills single-purpose — don't leak specifics.** A general skill describes a tool-agnostic workflow; a specific skill owns one tool, API, or system. Keep tool-specific commands, fields, and templates in the tool's skill; have the general skill describe _what_ to do and defer _how_ to the specific skill. See the authoring guide.
 
 ## Workflow
 

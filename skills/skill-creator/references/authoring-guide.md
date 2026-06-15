@@ -135,6 +135,37 @@ After changing migrations:
 Handle migrations carefully and make sure they work.
 ```
 
+### Keep Skills Single-Purpose — Don't Leak Specifics
+
+A general skill describes a tool-agnostic workflow or concept. A specific skill owns one tool, API, or system. Don't bleed one into the other: keep tool-specific commands, field names, and templates in the tool's skill, and have the general skill describe _what_ to do while deferring _how_ to the specific skill.
+
+Leaks make the general skill wrong the moment the specific tool changes, and they couple skills that should evolve independently. A reader applying the general skill to a different tool inherits irrelevant or misleading instructions.
+
+**Good:**
+
+```md
+<!-- issues skill -->
+
+Express dependencies using the tracker's native dependency feature, not prose.
+Publishing mechanics belong to the issue tracker's own skill.
+
+<!-- ticgit skill -->
+
+| Blockers | `ti dep <blocker-id> -t <id>` (structural; prose does not gate `ti next`) |
+```
+
+**Bad:**
+
+```md
+<!-- issues skill, hardcoding one tracker's commands and template -->
+
+## Blocked by
+
+- Run `ti dep <blocker-id> -t <id>` to block this issue.
+```
+
+The bad version only works for one tracker and silently misleads for any other. When extracting a skill from a conversation, watch for the specific tool you happened to use leaking into a general skill: if a rule names a command, file, or field of one tool, it probably belongs in that tool's skill.
+
 ### Set the Right Degree of Freedom
 
 - **High freedom** — style guidance, heuristics, multiple valid approaches
@@ -263,6 +294,7 @@ Avoid:
 - Ambiguous directives ("be careful", "where possible")
 - Contradictory rules without explicit priority ordering
 - Style guides without enforcement commands (linter, formatter)
+- Tool-specific commands, fields, or templates leaking into a general, tool-agnostic skill
 - Undocumented magic values or unexplained scripts
 - Extraneous files (README.md, CHANGELOG.md, INSTALLATION_GUIDE.md)
 

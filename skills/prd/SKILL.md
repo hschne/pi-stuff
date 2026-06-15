@@ -18,7 +18,7 @@ Synthesize the current conversation and codebase understanding into a product re
 - Use the project’s domain glossary vocabulary throughout.
 - Respect ADRs in the area being changed.
 - Actively look for deep modules that encapsulate behavior behind simple, testable interfaces.
-- Do not ask the user for confirmation before publishing. Use your best judgment for modules and test coverage based on the conversation context. The user will review the output file directly.
+- Do not ask the user for confirmation before publishing. Use your best judgment for modules and test coverage based on the conversation context. The user will review your work.
 - Do not include specific file paths or code snippets unless a prototype snippet captures a decision more precisely than prose.
 - Preserve referenced assets such as screenshots, mockups, diagrams, prototypes, recordings, or uploaded files so downstream issues can link back to them.
 
@@ -29,7 +29,7 @@ Synthesize the current conversation and codebase understanding into a product re
 3. Identify the major modules to build or modify, including any deep-module opportunities.
 4. Determine test coverage based on conversation context and codebase patterns.
 5. Write the PRD using the template below, including an **Assets** section when assets exist.
-6. Publish it to the project issue tracker.
+6. Publish it to the documented PRD home. If no such documented home can be found, request guidance from the user.
 
 ## PRD Template
 
