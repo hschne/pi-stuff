@@ -77,6 +77,12 @@ For every service object, concern, helper, query object, form object, or namespa
 
 A deep Rails module gives callers more behavior than they have to understand. A shallow module forces callers to know nearly as much as the implementation.
 
+## Write-Time Over Read-Time
+
+Do expensive composition when you save, not when you present. A complicated read query that sorts or filters in Ruby cannot be paginated and gets slower as data grows. Push the work to write-time: counter caches, a precomputed sort code or summary column, a denormalized roll-up maintained by callbacks or `touch:` chains.
+
+If a list view needs to sort or filter across heterogeneous records, that is a signal to compute a single materialized column (or a delegated type backed by one table) at write-time rather than assembling and sorting arrays at read-time.
+
 ## Models: Too Shallow vs Too Broad
 
 A model is too shallow when it is mostly persistence while business rules live in controllers, jobs, views, or procedural services.

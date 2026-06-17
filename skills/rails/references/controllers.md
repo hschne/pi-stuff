@@ -86,7 +86,7 @@ They must not contain:
 
 ## Strong Parameters: Just Permit, Don't Transform
 
-Strong params should only call `require`, `permit`, and nothing else. Never coerce types, symbolize keys, or restructure the hash in the controller. When splatted with `**`, permitted params automatically become a symbolized hash. Let the consuming model handle any type coercion it needs.
+Use `params.expect` in modern Rails — it permits and enforces the expected shape in one call, returning a 400 on a malformed payload instead of silently dropping keys. Strong params should only call `expect` (or `permit`), and nothing else. Never coerce types, symbolize keys, or restructure the hash in the controller. When splatted with `**`, permitted params automatically become a symbolized hash. Let the consuming model handle any type coercion it needs.
 
 **Bad:**
 
@@ -109,7 +109,7 @@ end
 def map_params
   return {} if params[:map].blank?
 
-  params.require(:map).permit(bounds: [:west, :south, :east, :north])
+  params.expect(map: [bounds: %i[west south east north]])
 end
 
 # Consumer receives symbolized kwargs automatically:
@@ -194,3 +194,7 @@ end
 ```
 
 Guard clauses make the happy path obvious.
+
+## Don't HTTP-Cache Pages With Forms
+
+Never wrap a page that renders a form in `fresh_when`/`stale?`/etag caching. The cached HTML pins a stale CSRF token, so the next submit fails with `422 Unprocessable Entity`. HTTP caching is for read-only responses; pages with forms must render fresh.

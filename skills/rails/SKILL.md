@@ -28,6 +28,7 @@ Regardless of what you change these core principles always apply.
 - Keep logic at the right layer: models handle data, controllers handle HTTP, jobs orchestrate workflows
 - Name things after business concepts, not technical patterns
 - Normalize data into proper tables instead of piling concerns into one model
+- Write methods for 2-3 cases instead of reaching for metaprogramming
 
 ## References
 

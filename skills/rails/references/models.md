@@ -78,6 +78,45 @@ Cloud.generated.count    # Scope
 
 Why: Type-safe, gives you predicate methods for free, database-efficient.
 
+## State as Records, Not Booleans
+
+When a boolean captures a state change worth attributing, model it as a record instead. A `closed: boolean` tells you nothing about who closed it or when; a `Closure` record gives you the creator, a timestamp, and trivial scoping for free.
+
+**Bad:**
+
+```ruby
+class Card < ApplicationRecord
+  # closed:boolean, closed_at:datetime, closed_by_id:integer all piled on
+end
+```
+
+**Good:**
+
+```ruby
+class Card < ApplicationRecord
+  has_one :closure, dependent: :destroy
+
+  scope :closed, -> { joins(:closure) }
+  scope :open, -> { where.missing(:closure) }
+end
+
+class Closure < ApplicationRecord
+  belongs_to :card
+  belongs_to :creator, class_name: "User", default: -> { Current.user }
+end
+```
+
+Reach for this when you'd otherwise add a boolean plus its `*_at` and `*_by` columns. A simple, un-attributed flag (`picked`) can stay a boolean.
+
+## Default Values via Lambdas
+
+Set contextual defaults on the association with a lambda instead of assigning them in the controller or a callback. The default is declared once on the model and applies everywhere the record is built.
+
+```ruby
+belongs_to :creator, class_name: "User", default: -> { Current.user }
+belongs_to :account, default: -> { board.account }
+```
+
 ## Use `normalizes` for Data Cleanup
 
 **Rails 8 feature.** Automatically clean data before validation.
@@ -164,6 +203,12 @@ concern included by a single model, or a helper called from a single caller, add
 indirection without reuse. Inline it at the call site and extract later once a
 second caller actually appears.
 
+**Where concerns live:**
+
+- Domain slices of one model are nested under that model's namespace: `Card::Closeable` in `app/models/card/closeable.rb`. Each is self-contained (associations + scopes + methods) and named for a capability (`Closeable`, `Watchable`, `Assignable`).
+- Reserve `app/models/concerns/` for behavior genuinely shared across multiple models.
+- Never extract a concern that contains only private methods — that is an extracted private section with worse locality.
+
 **How to structure:**
 
 ```ruby
@@ -223,6 +268,23 @@ end
 participant.clouds_count    # Fast, no query
 participant.invitations_count
 ```
+
+## Prefer DB Constraints Over Validations
+
+Hard invariants belong in the database (null, foreign-key, check constraints, unique indexes), not only in Active Record. Add an AR validation when you need to render a user-facing error message; otherwise back the rule with a constraint and let a bad write blow up. A `validates :x, uniqueness: true` without a backing unique index is a race condition. See [migrations-and-data](migrations-and-data.md).
+
+## Rails Shortcuts to Reach For
+
+Prefer these built-ins before writing custom code or adding a gem:
+
+- `normalizes` — clean data before validation.
+- `enum` — state columns with free predicates and scopes.
+- `delegated_type` — heterogeneous collections backed by one table.
+- `generates_token_for` — expiring signed tokens.
+- `store_accessor` — typed access into JSON columns.
+- `to_param` — override with a per-tenant `number` for human-friendly URLs instead of exposing raw IDs.
+- Association extensions for bulk domain operations on the `has_many` proxy; `insert_all` for bulk creates and `dependent: :delete_all` on join tables with no callbacks.
+- `after_save_commit` / `touch: true` chains for cache invalidation; `delegate` (lazy-loads too).
 
 ## Callbacks: Use Sparingly
 

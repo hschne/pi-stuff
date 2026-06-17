@@ -157,6 +157,26 @@ Why:
 
 When working inside a Turbo Frame (e.g. a modal), both the `form_with` and the `button_to` can still be children of the same `turbo_frame_tag` — just not nested inside each other.
 
+### Helpers Take Arguments, Not Ivars
+
+A helper reaching for an instance variable is a smell — the dependency is hidden and the helper only works from one controller context. Pass the value in so the dependency is explicit and the helper is reusable.
+
+**Bad:**
+
+```ruby
+def cloud_status_badge
+  tag.span @cloud.state, class: class_names("badge", badge__active: @cloud.generated?)
+end
+```
+
+**Good:**
+
+```ruby
+def cloud_status_badge(cloud)
+  tag.span cloud.state, class: class_names("badge", badge__active: cloud.generated?)
+end
+```
+
 ### Database Queries from Views
 
 **Good:** Simple associations and scopes

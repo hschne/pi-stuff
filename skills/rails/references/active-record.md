@@ -2,6 +2,24 @@
 
 This reference covers Active Record query patterns and database interaction conventions.
 
+## Use `pluck` to Materialize Attribute Lists
+
+**Use `.pluck(:name)` instead of `.map(&:name)` on a relation.** `map` loads full records into memory just to read one column; `pluck` selects only that column in SQL.
+
+**Bad:**
+
+```ruby
+project.entries.map(&:name)
+```
+
+**Good:**
+
+```ruby
+project.entries.pluck(:name)
+```
+
+This is the opposite case from the rule below: reach for `pluck` when you want the values; reach for a subquery when you only need the IDs to feed another query.
+
 ## Prefer Subqueries Over `pluck` + `WHERE IN`
 
 **Use `.select(:id)` subqueries instead of `.pluck(:id)` followed by `WHERE IN (...)`.**
