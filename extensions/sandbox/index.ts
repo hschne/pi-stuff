@@ -1,48 +1,58 @@
 /**
- * Sandbox extension (opt-in, filesystem-first).
+ * Sandbox extension (on by default, pure bubblewrap).
  *
- * Active ONLY when `.pi/sandbox.json` exists in the session cwd. With no config
- * the extension is inert and pi behaves exactly as without it.
+ * Active in EVERY session unless explicitly disabled. Disable with
+ * `/sandbox disable` (this session) or `"enabled": false` in a `sandbox.json`.
+ * An explicit `/sandbox enable` overrides `"enabled": false`. Config is optional
+ * and only customizes the baked-in defaults; with no config the secure defaults
+ * apply.
  *
- * When active:
- *   - cwd is read/write. Nothing else, unless listed in the config.
- *   - File tools (read/write/edit/grep/find/ls) are gated by a true path
- *     allowlist via the `tool_call` hook (block on deny).
- *   - bash and `!` run inside @anthropic-ai/sandbox-runtime (srt): bwrap +
- *     host proxy network allowlist.
+ * Threat model: the agent is NOT trusted (prompt injection from poisoned repos,
+ * malicious package postinstall scripts, etc.). We defend against the agent
+ * itself AND its subprocesses. Two layers, because OS sandboxing only covers
+ * bash:
  *
- * Config (`<cwd>/.pi/sandbox.json`, all keys optional):
+ *   1. bash + `!` run inside `bwrap`:
+ *        - read-only root (everything readable EXCEPT masked secret paths)
+ *        - writable: cwd + /tmp only (+ config.write)
+ *        - full network (no per-domain allowlist by design)
+ *        - PID namespace isolated
+ *        - secret env vars stripped (the #1 exfil control under full network)
+ *   2. The agent's in-process file tools (read/write/edit/grep/find/ls) are
+ *      gated by the same policy via the `tool_call` hook.
+ *
+ * Confidentiality rests on two fixed, low-maintenance deny-lists that ship as
+ * DATA in the global config (`~/.pi/agent/sandbox.json`), not in this code:
+ *   - SECRET ENV vars are scrubbed from sandboxed bash via the `scrubEnv` list
+ *     (global + project). Add project-specific secrets there explicitly.
+ *   - SKELETON-KEY paths (~/.ssh, ~/.config/fnox, ~/.pi, cloud creds, ...) are
+ *     listed in the global `denyRead` and masked from reads on both layers. Only
+ *     existing paths are masked, so no placeholder files are ever created.
+ *
+ * Config is read from BOTH (project overrides/extends global; arrays concatenate):
+ *   - `~/.pi/agent/sandbox.json`        (global)
+ *   - `<cwd>/.pi/sandbox.json`          (project)
+ * All keys optional — the file is an EXCEPTION file on top of secure defaults:
  *   {
- *     "allowedDomains": ["github.com", "*.github.com"],  // bash network allowlist
- *     "read":  ["~/.local/share/mise"],   // extra readable paths (file tools)
- *     "write": ["~/.cache/foo"],          // extra writable paths (file tools + bash)
- *     "denyRead":  ["~/.ssh", "config/master.key", "*.key"],
- *     "denyWrite": [".env", "*.pem"]
+ *     "enabled":  false,                    // turn the sandbox off entirely
+ *     "write":    ["~/.local/share/pnpm"],  // extra writable paths
+ *     "denyRead": ["~/extra-secret"],       // extra read masks
+ *     "allowEnv": ["DATABASE_URL"],         // secret env vars to KEEP for this project
+ *     "scrubEnv": ["EXTRA_TOKEN"]           // extra env vars to strip
  *   }
  *
  * Commands:
- *   /escape  - disable the sandbox for this session and reload.
+ *   /sandbox info     - show the active policy.
+ *   /sandbox disable  - disable the sandbox for this session and reload.
+ *   /sandbox enable   - re-enable the sandbox for this session and reload.
  *
- * IMPORTANT srt read caveat: srt ro-binds all of `/` into the bash sandbox, so
- * bash can READ the whole host filesystem except paths listed in `denyRead`
- * (which srt masks with tmpfs). The file-tool allowlist does NOT apply to bash.
- * To protect secrets from bash, list explicit paths in `denyRead`. Basename
- * globs (e.g. `*.key`) are expanded to current files under cwd at activation.
- * Writes and network are allowlisted for bash; reads are deny-list only.
- *
- * Setup:
- *   cd ~/.pi/agent/extensions/sandbox && npm install
- * Requirements (Linux): bwrap, socat, ripgrep.
+ * Requirements (Linux): bwrap.
  */
 
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
-import {
-  SandboxManager,
-  type SandboxRuntimeConfig,
-} from "@anthropic-ai/sandbox-runtime";
+import { spawn, spawnSync } from "node:child_process";
 import {
   type BashOperations,
   createBashTool,
@@ -52,77 +62,56 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 const STATUS_KEY = "sandbox";
-const STATUS_ICON = "";
-const ESCAPE_ENV = "PI_SANDBOX_DISABLED";
-const SKIP_GLOB_DIRS = new Set([".git", ".hg", ".svn", "node_modules"]);
+const STATUS_ICON = "";
+/** Session override set by /sandbox enable|disable. Trumps config either way. */
+const OVERRIDE_ENV = "PI_SANDBOX_OVERRIDE"; // "disable" | "enable" | unset
 
 interface SandboxJson {
-  allowedDomains?: string[];
-  read?: string[];
+  enabled?: boolean;
   write?: string[];
   denyRead?: string[];
-  denyWrite?: string[];
+  allowEnv?: string[];
+  scrubEnv?: string[];
 }
 
 interface Policy {
   cwd: string;
-  readDirs: string[];
   writeDirs: string[];
   denyRead: string[];
-  denyWrite: string[];
+  scrubEnv: Set<string>;
 }
 
 let active = false;
 let policy: Policy | undefined;
 
-function configPath(cwd: string): string {
-  return path.join(cwd, ".pi", "sandbox.json");
+function configPaths(cwd: string): string[] {
+  return [
+    path.join(homedir(), ".pi", "agent", "sandbox.json"),
+    path.join(cwd, ".pi", "sandbox.json"),
+  ];
 }
 
-function loadConfig(cwd: string): SandboxJson | undefined {
-  const p = configPath(cwd);
-  if (!existsSync(p)) return undefined;
+function readConfigFile(p: string): SandboxJson {
   try {
-    const cfg = JSON.parse(readFileSync(p, "utf-8")) as SandboxJson;
-    validateConfig(cfg);
-    return cfg;
+    return JSON.parse(readFileSync(p, "utf-8")) as SandboxJson;
   } catch (e) {
     throw new Error(`Invalid ${p}: ${e instanceof Error ? e.message : e}`);
   }
 }
 
-function validateConfig(cfg: SandboxJson): void {
-  const unsupported = [
-    ...unsupportedGlobEntries(cfg.read),
-    ...unsupportedGlobEntries(cfg.write),
-    ...unsupportedGlobEntries(cfg.denyRead),
-    ...unsupportedGlobEntries(cfg.denyWrite),
-  ];
-  if (unsupported.length > 0) {
-    throw new Error(
-      `unsupported path globs: ${unsupported.join(", ")}. Only basename globs like "*.key" are supported in denyRead/denyWrite.`,
-    );
+/** Merge global + project config. Scalars override; arrays concatenate. */
+function loadConfig(cwd: string): SandboxJson {
+  const merged: SandboxJson = {};
+  for (const p of configPaths(cwd)) {
+    if (!existsSync(p)) continue;
+    const cfg = readConfigFile(p);
+    if (cfg.enabled !== undefined) merged.enabled = cfg.enabled;
+    merged.write = [...(merged.write ?? []), ...(cfg.write ?? [])];
+    merged.denyRead = [...(merged.denyRead ?? []), ...(cfg.denyRead ?? [])];
+    merged.allowEnv = [...(merged.allowEnv ?? []), ...(cfg.allowEnv ?? [])];
+    merged.scrubEnv = [...(merged.scrubEnv ?? []), ...(cfg.scrubEnv ?? [])];
   }
-  const allowGlobs = [...(cfg.read ?? []), ...(cfg.write ?? [])].filter(isGlob);
-  if (allowGlobs.length > 0) {
-    throw new Error(
-      `read/write allowlists require explicit paths, not globs: ${allowGlobs.join(", ")}`,
-    );
-  }
-}
-
-function hasWildcard(entry: string): boolean {
-  return entry.includes("*");
-}
-
-function isGlob(entry: string): boolean {
-  return hasWildcard(entry) && !entry.includes("/");
-}
-
-function unsupportedGlobEntries(entries: string[] | undefined): string[] {
-  return (entries ?? []).filter(
-    (entry) => hasWildcard(entry) && !isGlob(entry),
-  );
+  return merged;
 }
 
 function expand(entry: string, cwd: string): string {
@@ -132,6 +121,7 @@ function expand(entry: string, cwd: string): string {
   return path.isAbsolute(e) ? path.normalize(e) : path.resolve(cwd, e);
 }
 
+/** Resolve symlinks for existing prefix, keep missing tail (path may not exist). */
 function physicalPath(abs: string): string {
   const missing: string[] = [];
   let current = path.normalize(abs);
@@ -144,92 +134,32 @@ function physicalPath(abs: string): string {
   return path.join(realpathSync.native(current), ...missing);
 }
 
-/** Non-glob entries expanded to absolute paths (for srt, which is path-based). */
-function expandPaths(entries: string[] | undefined, cwd: string): string[] {
-  return (entries ?? [])
-    .filter((e) => !isGlob(e))
-    .map((e) => physicalPath(expand(e, cwd)));
-}
-
-function collectGlobMatches(pattern: string, cwd: string): string[] {
-  const matches: string[] = [];
-  const re = globToRegExp(pattern);
-  const stack = [cwd];
-
-  while (stack.length > 0) {
-    const dir = stack.pop() as string;
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (re.test(entry.name)) matches.push(physicalPath(fullPath));
-      if (entry.isDirectory() && !SKIP_GLOB_DIRS.has(entry.name)) {
-        stack.push(fullPath);
-      }
-    }
-  }
-
-  return matches;
-}
-
-function expandDenyPaths(entries: string[] | undefined, cwd: string): string[] {
-  return (entries ?? []).flatMap((entry) =>
-    isGlob(entry)
-      ? collectGlobMatches(entry, cwd)
-      : [physicalPath(expand(entry, cwd))],
-  );
-}
-
 function isInside(base: string, target: string): boolean {
   if (target === base) return true;
   const rel = path.relative(base, target);
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 }
 
-function globToRegExp(pattern: string): RegExp {
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*/g, ".*");
-  return new RegExp(`^${escaped}$`);
-}
-
-function denied(entries: string[], abs: string, cwd: string): boolean {
-  for (const e of entries) {
-    if (isGlob(e)) {
-      if (globToRegExp(e).test(path.basename(abs))) return true;
-    } else if (isInside(physicalPath(expand(e, cwd)), abs)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 function buildPolicy(cfg: SandboxJson, cwd: string): Policy {
   const physicalCwd = physicalPath(cwd);
-  const reads = (cfg.read ?? []).map((e) => physicalPath(expand(e, cwd)));
   const writes = (cfg.write ?? []).map((e) => physicalPath(expand(e, cwd)));
+  const denies = (cfg.denyRead ?? []).map((e) => physicalPath(expand(e, cwd)));
+  const scrubEnv = new Set(cfg.scrubEnv ?? []);
+  for (const keep of cfg.allowEnv ?? []) scrubEnv.delete(keep);
   return {
-    cwd,
-    // Writable implies readable.
-    readDirs: [physicalCwd, ...reads, ...writes],
-    writeDirs: [physicalCwd, ...writes],
-    denyRead: cfg.denyRead ?? [],
-    denyWrite: cfg.denyWrite ?? [],
+    cwd: physicalCwd,
+    writeDirs: [physicalCwd, "/tmp", ...writes],
+    denyRead: denies,
+    scrubEnv,
   };
 }
 
-function canRead(p: Policy, abs: string): boolean {
-  if (denied(p.denyRead, abs, p.cwd)) return false;
-  return p.readDirs.some((dir) => isInside(dir, abs));
+function isDenied(p: Policy, abs: string): boolean {
+  return p.denyRead.some((dir) => isInside(dir, abs));
 }
 
 function canWrite(p: Policy, abs: string): boolean {
-  if (denied(p.denyWrite, abs, p.cwd)) return false;
+  if (isDenied(p, abs)) return false;
   return p.writeDirs.some((dir) => isInside(dir, abs));
 }
 
@@ -242,44 +172,75 @@ function resolveTarget(target: string | undefined, cwd: string): string {
     : path.resolve(cwd, cleaned);
 }
 
-function buildSrtConfig(cfg: SandboxJson, cwd: string): SandboxRuntimeConfig {
-  return {
-    network: {
-      allowedDomains: cfg.allowedDomains ?? [],
-      deniedDomains: [],
-    },
-    filesystem: {
-      denyRead: expandDenyPaths(cfg.denyRead, cwd),
-      allowWrite: [physicalPath(cwd), ...expandPaths(cfg.write, cwd)],
-      denyWrite: expandDenyPaths(cfg.denyWrite, cwd),
-    },
-  };
+/** bwrap arguments enforcing the filesystem policy (network is left untouched). */
+function buildBwrapArgs(p: Policy): string[] {
+  const args = [
+    "--die-with-parent",
+    "--new-session",
+    "--unshare-pid",
+    "--ro-bind",
+    "/",
+    "/",
+    "--proc",
+    "/proc",
+    "--dev",
+    "/dev",
+  ];
+  for (const dir of p.writeDirs) {
+    if (existsSync(dir)) args.push("--bind", dir, dir);
+  }
+  // Mask secrets AFTER writable binds so they win. Existing paths only.
+  for (const dir of p.denyRead) {
+    if (!existsSync(dir)) continue;
+    if (statSync(dir).isDirectory()) args.push("--tmpfs", dir);
+    else args.push("--ro-bind", "/dev/null", dir);
+  }
+  args.push("--chdir", p.cwd);
+  return args;
 }
 
-function createSrtBashOps(): BashOperations {
+function scrubbedEnv(
+  base: NodeJS.ProcessEnv,
+  scrub: Set<string>,
+): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const [k, v] of Object.entries(base)) {
+    if (!scrub.has(k)) out[k] = v;
+  }
+  return out;
+}
+
+function createBwrapBashOps(): BashOperations {
   return {
-    async exec(command, cwd, { onData, signal, timeout }) {
+    async exec(command, cwd, { onData, signal, timeout, env }) {
       if (!existsSync(cwd))
         throw new Error(`Working directory does not exist: ${cwd}`);
-      const wrapped = await SandboxManager.wrapWithSandbox(command);
+      if (!policy) throw new Error("Sandbox policy missing");
+      const args = [...buildBwrapArgs(policy), "--", "bash", "-c", command];
+      const childEnv = scrubbedEnv(env ?? process.env, policy.scrubEnv);
       return new Promise((resolve, reject) => {
-        const child = spawn("bash", ["-c", wrapped], {
+        const child = spawn("bwrap", args, {
           cwd,
+          env: childEnv,
           detached: true,
           stdio: ["ignore", "pipe", "pipe"],
         });
+        // Kill the whole process group (PID-namespaced by bwrap), falling back
+        // to the direct child if the group signal fails.
+        const killTree = () => {
+          if (!child.pid) return;
+          try {
+            process.kill(-child.pid, "SIGKILL");
+          } catch {
+            child.kill("SIGKILL");
+          }
+        };
         let timedOut = false;
         let timer: NodeJS.Timeout | undefined;
         if (timeout !== undefined && timeout > 0) {
           timer = setTimeout(() => {
             timedOut = true;
-            if (child.pid) {
-              try {
-                process.kill(-child.pid, "SIGKILL");
-              } catch {
-                child.kill("SIGKILL");
-              }
-            }
+            killTree();
           }, timeout * 1000);
         }
         child.stdout?.on("data", onData);
@@ -288,15 +249,7 @@ function createSrtBashOps(): BashOperations {
           if (timer) clearTimeout(timer);
           reject(err);
         });
-        const onAbort = () => {
-          if (child.pid) {
-            try {
-              process.kill(-child.pid, "SIGKILL");
-            } catch {
-              child.kill("SIGKILL");
-            }
-          }
-        };
+        const onAbort = () => killTree();
         signal?.addEventListener("abort", onAbort, { once: true });
         child.on("close", (code) => {
           if (timer) clearTimeout(timer);
@@ -310,68 +263,94 @@ function createSrtBashOps(): BashOperations {
   };
 }
 
+/** Join a list, truncating to `max` entries with a "(+N more)" suffix. */
+function summarize(items: string[], max = 3): string {
+  if (items.length <= max) return items.join(", ");
+  return `${items.slice(0, max).join(", ")} (+${items.length - max} more)`;
+}
+
+function showInfo(ctx: ExtensionCommandContext): void {
+  if (!active || !policy) {
+    ctx.ui.notify("Sandbox is disabled for this session.", "info");
+    return;
+  }
+  const masked = policy.denyRead.filter((d) => existsSync(d));
+  const lines = [
+    "Sandbox active (pure bwrap)",
+    "",
+    `Writable:   ${summarize(policy.writeDirs)}`,
+    `Read masks: ${masked.length ? summarize(masked) : "(none present)"}`,
+    `Env scrub:  ${policy.scrubEnv.size} secret var(s) stripped from bash`,
+    "Network:    full (no per-domain allowlist)",
+  ];
+  ctx.ui.notify(lines.join("\n"), "info");
+}
+
 function setStatus(ctx: ExtensionContext): void {
   if (active)
     ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("accent", STATUS_ICON));
   else ctx.ui.setStatus(STATUS_KEY, undefined);
 }
 
-async function activate(ctx: ExtensionContext): Promise<void> {
+function activate(ctx: ExtensionContext): void {
   active = false;
   policy = undefined;
-  if (process.env[ESCAPE_ENV] === "1") {
+  const override = process.env[OVERRIDE_ENV];
+  if (override === "disable") {
     setStatus(ctx);
     return;
   }
-  let cfg: SandboxJson | undefined;
+  // On by default. Invalid config fails safe (defaults still apply).
+  let cfg: SandboxJson = {};
   try {
     cfg = loadConfig(ctx.cwd);
   } catch (e) {
-    ctx.ui.notify(`Sandbox: ${e instanceof Error ? e.message : e}`, "error");
-    return;
-  }
-  if (!cfg) {
-    setStatus(ctx);
-    return;
-  }
-  try {
-    await SandboxManager.initialize(buildSrtConfig(cfg, ctx.cwd));
-    policy = buildPolicy(cfg, ctx.cwd);
-    active = true;
-    setStatus(ctx);
-  } catch (e) {
-    active = false;
-    policy = undefined;
     ctx.ui.notify(
-      `Sandbox FAILED to initialize - running UNSANDBOXED: ${e instanceof Error ? e.message : e}`,
+      `Sandbox: ${e instanceof Error ? e.message : e} (using defaults)`,
       "error",
     );
   }
+  // Config can disable, but an explicit `/sandbox enable` overrides it.
+  if (cfg.enabled === false && override !== "enable") {
+    ctx.ui.notify(
+      "Sandbox disabled via config (/sandbox enable to override)",
+      "info",
+    );
+    setStatus(ctx);
+    return;
+  }
+  if (
+    !existsSync("/usr/bin/bwrap") &&
+    spawnSync("which", ["bwrap"]).status !== 0
+  ) {
+    ctx.ui.notify(
+      "Sandbox FAILED: bwrap not found - running UNSANDBOXED",
+      "error",
+    );
+    setStatus(ctx);
+    return;
+  }
+  policy = buildPolicy(cfg, ctx.cwd);
+  active = true;
+  setStatus(ctx);
 }
 
 export default function (pi: ExtensionAPI) {
   let sessionCwd = process.cwd();
   let localBash = createBashTool(sessionCwd);
 
-  pi.on("session_start", async (_event, ctx) => {
+  pi.on("session_start", (_event, ctx) => {
     sessionCwd = ctx.cwd;
     localBash = createBashTool(sessionCwd);
-    await activate(ctx);
+    activate(ctx);
   });
 
-  pi.on("session_shutdown", async () => {
-    if (active) {
-      active = false;
-      policy = undefined;
-      try {
-        await SandboxManager.reset();
-      } catch {
-        // ignore
-      }
-    }
+  pi.on("session_shutdown", () => {
+    active = false;
+    policy = undefined;
   });
 
-  // Gate file tools by path allowlist. bash is handled by the srt override below.
+  // Gate the agent's in-process file tools. bash is handled by the bwrap override.
   pi.on("tool_call", (event) => {
     if (!active || !policy) return;
     let target: string | undefined;
@@ -393,11 +372,11 @@ export default function (pi: ExtensionAPI) {
         return;
     }
     const abs = physicalPath(resolveTarget(target, policy.cwd));
-    const ok = mode === "read" ? canRead(policy, abs) : canWrite(policy, abs);
+    const ok = mode === "read" ? !isDenied(policy, abs) : canWrite(policy, abs);
     if (!ok) {
       return {
         block: true,
-        reason: `Sandbox: ${mode} denied outside allowed paths: ${abs}`,
+        reason: `Sandbox: ${mode} denied for path: ${abs}`,
       };
     }
   });
@@ -407,10 +386,12 @@ export default function (pi: ExtensionAPI) {
     label: "bash (sandboxed)",
     async execute(id: any, params: any, signal: any, onUpdate: any, ctx: any) {
       const cwd = typeof ctx?.cwd === "string" ? ctx.cwd : sessionCwd;
-      const bash = cwd === sessionCwd ? localBash : createBashTool(cwd);
-      if (!active) return bash.execute(id, params, signal, onUpdate);
+      if (!active) {
+        const bash = cwd === sessionCwd ? localBash : createBashTool(cwd);
+        return bash.execute(id, params, signal, onUpdate);
+      }
       const sandboxed = createBashTool(cwd, {
-        operations: createSrtBashOps(),
+        operations: createBwrapBashOps(),
       });
       return sandboxed.execute(id, params, signal, onUpdate);
     },
@@ -418,27 +399,44 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("user_bash", () => {
     if (!active) return;
-    return { operations: createSrtBashOps() };
+    return { operations: createBwrapBashOps() };
   });
 
-  pi.registerCommand("escape", {
-    description: "Disable the sandbox for this session and reload",
-    handler: async (_args: string, ctx: ExtensionCommandContext) => {
-      if (!active) {
-        ctx.ui.notify("Sandbox is not active.", "info");
-        return;
+  pi.registerCommand("sandbox", {
+    description: "Sandbox control: /sandbox [info|enable|disable]",
+    handler: async (args: string, ctx: ExtensionCommandContext) => {
+      const sub = args.trim().toLowerCase() || "info";
+      switch (sub) {
+        case "info":
+          showInfo(ctx);
+          return;
+        case "disable":
+          if (!active) {
+            ctx.ui.notify("Sandbox is already disabled.", "info");
+            return;
+          }
+          process.env[OVERRIDE_ENV] = "disable";
+          active = false;
+          policy = undefined;
+          ctx.ui.setStatus(STATUS_KEY, undefined);
+          ctx.ui.notify(
+            "Sandbox disabled for this session. Reloading…",
+            "warning",
+          );
+          await ctx.reload();
+          return;
+        case "enable":
+          if (active) {
+            ctx.ui.notify("Sandbox is already enabled.", "info");
+            return;
+          }
+          process.env[OVERRIDE_ENV] = "enable";
+          ctx.ui.notify("Sandbox enabling. Reloading…", "warning");
+          await ctx.reload();
+          return;
+        default:
+          ctx.ui.notify("Usage: /sandbox [info|enable|disable]", "info");
       }
-      process.env[ESCAPE_ENV] = "1";
-      try {
-        await SandboxManager.reset();
-      } catch {
-        // ignore
-      }
-      active = false;
-      policy = undefined;
-      ctx.ui.setStatus(STATUS_KEY, undefined);
-      ctx.ui.notify("Sandbox disabled for this session. Reloading…", "warning");
-      await ctx.reload();
     },
   });
 }

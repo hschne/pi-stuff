@@ -1,0 +1,16 @@
+{
+  "denyRead": [
+    "~/.ssh",
+    "~/.gnupg",
+    "~/.aws",
+    "~/.config/gcloud",
+    "~/.config/gh",
+    "~/.config/fnox",
+    "~/.config/Proton",
+    "~/.config/Proton Pass",
+    "~/.pi/agent/auth.json",
+    "~/.docker",
+    "~/.kube"
+  ],
+  "scrubEnv": []
+}

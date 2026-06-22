@@ -1,15 +1,11 @@
 {
   "name": "pi-extension-sandbox-hans",
-  "private": true,
   "version": "1.0.0",
+  "description": "Bubblewrap sandbox on by default: read-only root, writable cwd+/tmp, secret env scrub and skeleton-key path masking",
   "type": "module",
   "pi": {
     "extensions": [
       "./index.ts"
     ]
-  },
-  "dependencies": {
-    "@anthropic-ai/sandbox-runtime": "^0.0.26",
-    "@earendil-works/pi-coding-agent": "*"
   }
 }
