@@ -6,8 +6,8 @@
 import type {
   MessageRenderOptions,
   Theme,
-} from "@mariozechner/pi-coding-agent";
-import { Box, Container, Spacer, Text } from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-coding-agent";
+import { Box, Container, Spacer, Text } from "@earendil-works/pi-tui";
 import { getIterationState } from "./live-state.js";
 
 export const RALPH_EVENT_TYPE = "ralph-event";

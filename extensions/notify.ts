@@ -8,8 +8,8 @@
  * instead of OSC 777 terminal escape sequences.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Markdown, type MarkdownTheme } from "@mariozechner/pi-tui";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Markdown, type MarkdownTheme } from "@earendil-works/pi-tui";
 
 type AssistantLike = {
   role?: string;

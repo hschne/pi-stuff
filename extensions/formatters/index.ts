@@ -19,7 +19,7 @@
  */
 
 import { extname } from "node:path";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadConfig, findFormattersForExtension } from "./config.js";
 import { runFormatter, getFormatterStatus } from "./runner.js";
 import type { FormattersConfig } from "./types.js";

@@ -19,8 +19,8 @@
 import type {
   ExtensionAPI,
   ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
-import { Key, matchesKey } from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-coding-agent";
+import { Key, matchesKey } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { parseRalphArgs } from "./args.js";
 import { listConfigNames, loadConfig } from "./config.js";

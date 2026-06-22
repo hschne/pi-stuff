@@ -4,7 +4,7 @@ import path from "node:path";
 import type {
   ExtensionAPI,
   ToolResultEvent,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   getAgentDir,
   isEditToolResult,
@@ -12,7 +12,7 @@ import {
   isWriteToolResult,
   loadSkills,
   stripFrontmatter,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 
 type Trigger = "read" | "edit" | "write";
 

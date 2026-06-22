@@ -1,0 +1,15 @@
+{
+  "name": "pi-extension-sandbox-hans",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "dependencies": {
+    "@anthropic-ai/sandbox-runtime": "^0.0.26",
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}

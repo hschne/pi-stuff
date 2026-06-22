@@ -15,7 +15,7 @@
  * aborts the loop loudly rather than being treated as "keep going".
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { type RalphConfig, resolveScriptPath } from "./config.js";
 
 export interface StopCheckResult {
