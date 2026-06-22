@@ -26,15 +26,16 @@
  * IMPORTANT srt read caveat: srt ro-binds all of `/` into the bash sandbox, so
  * bash can READ the whole host filesystem except paths listed in `denyRead`
  * (which srt masks with tmpfs). The file-tool allowlist does NOT apply to bash.
- * To protect secrets from bash, list them in `denyRead`. Writes and network are
- * allowlisted for bash; reads are deny-list only.
+ * To protect secrets from bash, list explicit paths in `denyRead`. Basename
+ * globs (e.g. `*.key`) are expanded to current files under cwd at activation.
+ * Writes and network are allowlisted for bash; reads are deny-list only.
  *
  * Setup:
  *   cd ~/.pi/agent/extensions/sandbox && npm install
  * Requirements (Linux): bwrap, socat, ripgrep.
  */
 
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -51,7 +52,9 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 const STATUS_KEY = "sandbox";
+const STATUS_ICON = "";
 const ESCAPE_ENV = "PI_SANDBOX_DISABLED";
+const SKIP_GLOB_DIRS = new Set([".git", ".hg", ".svn", "node_modules"]);
 
 interface SandboxJson {
   allowedDomains?: string[];
@@ -80,14 +83,46 @@ function loadConfig(cwd: string): SandboxJson | undefined {
   const p = configPath(cwd);
   if (!existsSync(p)) return undefined;
   try {
-    return JSON.parse(readFileSync(p, "utf-8")) as SandboxJson;
+    const cfg = JSON.parse(readFileSync(p, "utf-8")) as SandboxJson;
+    validateConfig(cfg);
+    return cfg;
   } catch (e) {
     throw new Error(`Invalid ${p}: ${e instanceof Error ? e.message : e}`);
   }
 }
 
+function validateConfig(cfg: SandboxJson): void {
+  const unsupported = [
+    ...unsupportedGlobEntries(cfg.read),
+    ...unsupportedGlobEntries(cfg.write),
+    ...unsupportedGlobEntries(cfg.denyRead),
+    ...unsupportedGlobEntries(cfg.denyWrite),
+  ];
+  if (unsupported.length > 0) {
+    throw new Error(
+      `unsupported path globs: ${unsupported.join(", ")}. Only basename globs like "*.key" are supported in denyRead/denyWrite.`,
+    );
+  }
+  const allowGlobs = [...(cfg.read ?? []), ...(cfg.write ?? [])].filter(isGlob);
+  if (allowGlobs.length > 0) {
+    throw new Error(
+      `read/write allowlists require explicit paths, not globs: ${allowGlobs.join(", ")}`,
+    );
+  }
+}
+
+function hasWildcard(entry: string): boolean {
+  return entry.includes("*");
+}
+
 function isGlob(entry: string): boolean {
-  return entry.includes("*") && !entry.includes("/");
+  return hasWildcard(entry) && !entry.includes("/");
+}
+
+function unsupportedGlobEntries(entries: string[] | undefined): string[] {
+  return (entries ?? []).filter(
+    (entry) => hasWildcard(entry) && !isGlob(entry),
+  );
 }
 
 function expand(entry: string, cwd: string): string {
@@ -97,9 +132,57 @@ function expand(entry: string, cwd: string): string {
   return path.isAbsolute(e) ? path.normalize(e) : path.resolve(cwd, e);
 }
 
+function physicalPath(abs: string): string {
+  const missing: string[] = [];
+  let current = path.normalize(abs);
+  while (!existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) return path.normalize(abs);
+    missing.unshift(path.basename(current));
+    current = parent;
+  }
+  return path.join(realpathSync.native(current), ...missing);
+}
+
 /** Non-glob entries expanded to absolute paths (for srt, which is path-based). */
 function expandPaths(entries: string[] | undefined, cwd: string): string[] {
-  return (entries ?? []).filter((e) => !isGlob(e)).map((e) => expand(e, cwd));
+  return (entries ?? [])
+    .filter((e) => !isGlob(e))
+    .map((e) => physicalPath(expand(e, cwd)));
+}
+
+function collectGlobMatches(pattern: string, cwd: string): string[] {
+  const matches: string[] = [];
+  const re = globToRegExp(pattern);
+  const stack = [cwd];
+
+  while (stack.length > 0) {
+    const dir = stack.pop() as string;
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (re.test(entry.name)) matches.push(physicalPath(fullPath));
+      if (entry.isDirectory() && !SKIP_GLOB_DIRS.has(entry.name)) {
+        stack.push(fullPath);
+      }
+    }
+  }
+
+  return matches;
+}
+
+function expandDenyPaths(entries: string[] | undefined, cwd: string): string[] {
+  return (entries ?? []).flatMap((entry) =>
+    isGlob(entry)
+      ? collectGlobMatches(entry, cwd)
+      : [physicalPath(expand(entry, cwd))],
+  );
 }
 
 function isInside(base: string, target: string): boolean {
@@ -119,7 +202,7 @@ function denied(entries: string[], abs: string, cwd: string): boolean {
   for (const e of entries) {
     if (isGlob(e)) {
       if (globToRegExp(e).test(path.basename(abs))) return true;
-    } else if (isInside(expand(e, cwd), abs)) {
+    } else if (isInside(physicalPath(expand(e, cwd)), abs)) {
       return true;
     }
   }
@@ -127,17 +210,14 @@ function denied(entries: string[], abs: string, cwd: string): boolean {
 }
 
 function buildPolicy(cfg: SandboxJson, cwd: string): Policy {
-  const reads = (cfg.read ?? [])
-    .filter((e) => !isGlob(e))
-    .map((e) => expand(e, cwd));
-  const writes = (cfg.write ?? [])
-    .filter((e) => !isGlob(e))
-    .map((e) => expand(e, cwd));
+  const physicalCwd = physicalPath(cwd);
+  const reads = (cfg.read ?? []).map((e) => physicalPath(expand(e, cwd)));
+  const writes = (cfg.write ?? []).map((e) => physicalPath(expand(e, cwd)));
   return {
     cwd,
     // Writable implies readable.
-    readDirs: [cwd, ...reads, ...writes],
-    writeDirs: [cwd, ...writes],
+    readDirs: [physicalCwd, ...reads, ...writes],
+    writeDirs: [physicalCwd, ...writes],
     denyRead: cfg.denyRead ?? [],
     denyWrite: cfg.denyWrite ?? [],
   };
@@ -162,16 +242,6 @@ function resolveTarget(target: string | undefined, cwd: string): string {
     : path.resolve(cwd, cleaned);
 }
 
-function physicalPath(abs: string, mode: "read" | "write"): string {
-  if (existsSync(abs)) return realpathSync.native(abs);
-  if (mode === "write") {
-    const parent = path.dirname(abs);
-    if (existsSync(parent))
-      return path.join(realpathSync.native(parent), path.basename(abs));
-  }
-  return abs;
-}
-
 function buildSrtConfig(cfg: SandboxJson, cwd: string): SandboxRuntimeConfig {
   return {
     network: {
@@ -179,9 +249,9 @@ function buildSrtConfig(cfg: SandboxJson, cwd: string): SandboxRuntimeConfig {
       deniedDomains: [],
     },
     filesystem: {
-      denyRead: expandPaths(cfg.denyRead, cwd),
-      allowWrite: [cwd, ...expandPaths(cfg.write, cwd)],
-      denyWrite: expandPaths(cfg.denyWrite, cwd),
+      denyRead: expandDenyPaths(cfg.denyRead, cwd),
+      allowWrite: [physicalPath(cwd), ...expandPaths(cfg.write, cwd)],
+      denyWrite: expandDenyPaths(cfg.denyWrite, cwd),
     },
   };
 }
@@ -241,7 +311,8 @@ function createSrtBashOps(): BashOperations {
 }
 
 function setStatus(ctx: ExtensionContext): void {
-  if (active) ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("accent", "🔒"));
+  if (active)
+    ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("accent", STATUS_ICON));
   else ctx.ui.setStatus(STATUS_KEY, undefined);
 }
 
@@ -279,10 +350,12 @@ async function activate(ctx: ExtensionContext): Promise<void> {
 }
 
 export default function (pi: ExtensionAPI) {
-  const localCwd = process.cwd();
-  const localBash = createBashTool(localCwd);
+  let sessionCwd = process.cwd();
+  let localBash = createBashTool(sessionCwd);
 
   pi.on("session_start", async (_event, ctx) => {
+    sessionCwd = ctx.cwd;
+    localBash = createBashTool(sessionCwd);
     await activate(ctx);
   });
 
@@ -319,7 +392,7 @@ export default function (pi: ExtensionAPI) {
       default:
         return;
     }
-    const abs = physicalPath(resolveTarget(target, policy.cwd), mode);
+    const abs = physicalPath(resolveTarget(target, policy.cwd));
     const ok = mode === "read" ? canRead(policy, abs) : canWrite(policy, abs);
     if (!ok) {
       return {
@@ -332,9 +405,11 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     ...localBash,
     label: "bash (sandboxed)",
-    async execute(id: any, params: any, signal: any, onUpdate: any) {
-      if (!active) return localBash.execute(id, params, signal, onUpdate);
-      const sandboxed = createBashTool(localCwd, {
+    async execute(id: any, params: any, signal: any, onUpdate: any, ctx: any) {
+      const cwd = typeof ctx?.cwd === "string" ? ctx.cwd : sessionCwd;
+      const bash = cwd === sessionCwd ? localBash : createBashTool(cwd);
+      if (!active) return bash.execute(id, params, signal, onUpdate);
+      const sandboxed = createBashTool(cwd, {
         operations: createSrtBashOps(),
       });
       return sandboxed.execute(id, params, signal, onUpdate);
