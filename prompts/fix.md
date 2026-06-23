@@ -1,6 +1,5 @@
 ---
 description: Fix open FIX issues
-model: anthropic/claude-opus-4-8
 thinking: high
 ---
 
@@ -12,7 +11,7 @@ Never edit before the user approves the specific change. Gather context, propose
 
 ## Workflow
 
-1. **Find them.** Grep for `FIX` across the repo. Exclude `node_modules`, vendored code, build output, and fixtures. List them with paths and line numbers.
+1. **Find them.** Grep for `FIX` across the repo. Exclude `node_modules`, vendored code, and build output. List them with paths and line numbers.
 
 2. **Work file by file.** Pick one file. Read every FIX in it plus the context needed to judge it — surrounding code, callers, related models/serializers/types, tests, schema. Verify the claim instead of trusting the comment.
 

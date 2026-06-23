@@ -17,7 +17,7 @@ Modern Ruby idioms and language features to prefer over older patterns.
 
 - Prefer modern Ruby features over verbose equivalents when they improve clarity
 - Do not use numbered parameters (`_1`, `_2`) — use `it` for single-argument blocks or named parameters for multi-argument blocks
-- Never use single-letter variable or parameter names — always use descriptive names (`entry` not `e`, `options` not `o`, `user` not `u`)
+- Never use single-letter or shortened variable or parameter names — always use descriptive names (`entry` not `e`, `options` not `o`, `recommendation` not `rec`)
 - Use pattern matching for complex conditional destructuring instead of chains of `if`/`[]`
 
 ## Block Parameters
