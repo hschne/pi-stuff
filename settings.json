@@ -9,11 +9,9 @@
     "npm:pi-mcp-adapter",
     "npm:pi-prompt-template-model",
     "npm:pi-subagents",
-    "npm:pi-web-access",
-    "npm:pi-annotate",
-    "npm:pi-rewind-hook"
+    "npm:pi-web-access"
   ],
-  "defaultThinkingLevel": "xhigh",
+  "defaultThinkingLevel": "high",
   "hideThinkingBlock": false,
   "enabledModels": [
     "anthropic/claude-opus-4-8",
