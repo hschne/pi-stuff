@@ -5,6 +5,8 @@
     "~/.aws",
     "~/.config/gcloud",
     "~/.config/gh",
+    "~/.config/.cf",
+    "~/.config/cf",
     "~/.config/fnox",
     "~/.config/Proton",
     "~/.config/Proton Pass",

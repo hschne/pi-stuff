@@ -1,6 +1,5 @@
 import { execFileSync, execSync } from "node:child_process";
-import { homedir } from "node:os";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const MARKER = "π";
@@ -15,23 +14,6 @@ const tmux = (cmd: string): string => {
     return execSync(`tmux ${cmd}`, { encoding: "utf-8", timeout: 2000 }).trim();
   } catch {
     return "";
-  }
-};
-
-const run_set_pane_title = (pane_id: string, title?: string): void => {
-  const script = join(homedir(), ".scripts", "set-tmux-pane-title");
-  const args = ["--pane-id", pane_id];
-
-  if (title) {
-    args.push("--title", title);
-  } else {
-    args.push("--clear");
-  }
-
-  try {
-    execFileSync(script, args, { stdio: "ignore", timeout: 2000 });
-  } catch {
-    // Ignore missing script or tmux errors.
   }
 };
 
@@ -50,12 +32,24 @@ const truncate = (str: string, max: number): string => {
 export default function (pi: ExtensionAPI) {
   if (!is_tmux()) return;
 
-  const pane_id = tmux("display-message -p '#{pane_id}'");
+  const pane_id =
+    process.env.TMUX_PANE || tmux("display-message -p '#{pane_id}'");
   if (!pane_id) return;
 
   const project_name = basename(process.cwd());
   let model_name = "";
   let is_working = false;
+  let errored = false;
+  let last_title = "";
+  let last_state = "";
+
+  const tmux_run = (args: string[]): void => {
+    try {
+      execFileSync("tmux", args, { stdio: "ignore", timeout: 2000 });
+    } catch {
+      // Ignore tmux errors.
+    }
+  };
 
   const get_session_title = (ctx?: {
     sessionManager: { getBranch(): any[] };
@@ -88,6 +82,9 @@ export default function (pi: ExtensionAPI) {
     return undefined;
   };
 
+  // One tmux invocation updates the pane border title (@pi_title) and the
+  // window-tab status/label, then refreshes. Args are passed literally (no
+  // shell), so the title needs no escaping. Skipped when nothing changed.
   const update_title = (ctx?: { sessionManager: { getBranch(): any[] } }) => {
     const status_icon = is_working ? `${MARKER}*` : MARKER;
     const model_part = model_name ? ` · ${model_name}` : "";
@@ -95,15 +92,65 @@ export default function (pi: ExtensionAPI) {
     const session_part = session_title
       ? ` · ${truncate(session_title, MAX_SESSION_TITLE_LEN)}`
       : "";
+    const title = `${status_icon} ${project_name}${model_part}${session_part}`;
+    const state = is_working ? "working" : errored ? "crashed" : "waiting";
 
-    run_set_pane_title(
+    if (title === last_title && state === last_state) return;
+    last_title = title;
+    last_state = state;
+
+    tmux_run([
+      "set-option",
+      "-p",
+      "-t",
       pane_id,
-      `${status_icon} ${project_name}${model_part}${session_part}`,
-    );
+      "@pi_title",
+      title,
+      ";",
+      "set-option",
+      "-p",
+      "-t",
+      pane_id,
+      "@pane_status",
+      state,
+      ";",
+      "set-option",
+      "-p",
+      "-t",
+      pane_id,
+      "@pane_label",
+      MARKER,
+      ";",
+      "refresh-client",
+      "-S",
+    ]);
   };
 
   const clear_title = () => {
-    run_set_pane_title(pane_id);
+    last_title = "";
+    last_state = "";
+    tmux_run([
+      "set-option",
+      "-pu",
+      "-t",
+      pane_id,
+      "@pi_title",
+      ";",
+      "set-option",
+      "-pu",
+      "-t",
+      pane_id,
+      "@pane_status",
+      ";",
+      "set-option",
+      "-pu",
+      "-t",
+      pane_id,
+      "@pane_label",
+      ";",
+      "refresh-client",
+      "-S",
+    ]);
   };
 
   pi.on("session_start", async (_event, ctx) => {
@@ -128,7 +175,14 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_start", async (_event, ctx) => {
     is_working = true;
+    errored = false;
     update_title(ctx);
+  });
+
+  // Track the latest provider HTTP status so a failed turn (e.g. a 429
+  // rate limit) ends as crashed (red) rather than waiting (blue).
+  pi.on("after_provider_response", async (event) => {
+    errored = event.status >= 400;
   });
 
   pi.on("agent_end", async (_event, ctx) => {
