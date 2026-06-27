@@ -42,7 +42,7 @@ Check for prior art before writing:
 
 ### 3. Draft
 
-Read the [authoring guide](references/authoring-guide.md) and write the skill.
+Read the [authoring guide](references/authoring-guide.md) for structure and style, and the [skill design](references/skill-design.md) reference for the underlying levers — invocation cost, leading words, progressive disclosure, and pruning. Then write the skill.
 
 Skill structure:
 
@@ -104,11 +104,12 @@ Read the [eval guide](references/eval-guide.md) "Description Optimization" secti
 
 Read the reference that matches the current task:
 
-| Topic     | When to Read                                              | Reference                                        |
-| --------- | --------------------------------------------------------- | ------------------------------------------------ |
-| authoring | Writing or reviewing a SKILL.md — structure, style, rules | [authoring-guide](references/authoring-guide.md) |
-| evals     | Creating test cases, running evals, grading, benchmarking | [eval-guide](references/eval-guide.md)           |
-| schemas   | JSON structures for evals.json, grading.json              | [schemas](references/schemas.md)                 |
+| Topic     | When to Read                                               | Reference                                        |
+| --------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| authoring | Writing or reviewing a SKILL.md — structure, style, rules  | [authoring-guide](references/authoring-guide.md) |
+| design    | Deciding invocation, naming, disclosure, and what to prune | [skill-design](references/skill-design.md)       |
+| evals     | Creating test cases, running evals, grading, benchmarking  | [eval-guide](references/eval-guide.md)           |
+| schemas   | JSON structures for evals.json, grading.json               | [schemas](references/schemas.md)                 |
 
 ## Subagents
 
