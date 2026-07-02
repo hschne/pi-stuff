@@ -94,10 +94,13 @@ let policy: Policy | undefined;
 /** Session override set by /sandbox enable|disable. Trumps config either way. */
 let sessionOverride: SandboxOverride | undefined;
 
-function configPaths(cwd: string): string[] {
+function configPaths(cwd: string, extraCwds: string[] = []): string[] {
+  const projectCwds = [...new Set([cwd, ...extraCwds])];
   return [
     path.join(homedir(), ".pi", "agent", "sandbox.json"),
-    path.join(cwd, ".pi", "sandbox.json"),
+    ...projectCwds.map((projectCwd) =>
+      path.join(projectCwd, ".pi", "sandbox.json"),
+    ),
   ];
 }
 
@@ -110,9 +113,9 @@ function readConfigFile(p: string): SandboxJson {
 }
 
 /** Merge global + project config. Scalars override; arrays concatenate. */
-function loadConfig(cwd: string): SandboxJson {
+function loadConfig(cwd: string, extraCwds: string[] = []): SandboxJson {
   const merged: SandboxJson = {};
-  for (const p of configPaths(cwd)) {
+  for (const p of configPaths(cwd, extraCwds)) {
     if (!existsSync(p)) continue;
     const cfg = readConfigFile(p);
     if (cfg.enabled !== undefined) merged.enabled = cfg.enabled;
@@ -152,13 +155,14 @@ function isInside(base: string, target: string): boolean {
 
 function buildPolicy(cfg: SandboxJson, cwd: string): Policy {
   const physicalCwd = physicalPath(cwd);
+  const launchCwd = physicalPath(process.cwd());
   const writes = (cfg.write ?? []).map((e) => physicalPath(expand(e, cwd)));
   const denies = (cfg.denyRead ?? []).map((e) => physicalPath(expand(e, cwd)));
   const scrubEnv = new Set(cfg.scrubEnv ?? []);
   for (const keep of cfg.allowEnv ?? []) scrubEnv.delete(keep);
   return {
     cwd: physicalCwd,
-    writeDirs: [physicalCwd, "/tmp", ...writes],
+    writeDirs: [...new Set([physicalCwd, launchCwd, "/tmp", ...writes])],
     denyRead: denies,
     scrubEnv,
   };
@@ -333,10 +337,12 @@ function activate(ctx: ExtensionContext): void {
     setStatus(ctx);
     return;
   }
+  const launchCwd = process.cwd();
+  const extraConfigCwds = launchCwd !== ctx.cwd ? [launchCwd] : [];
   // On by default. Invalid config fails safe (defaults still apply).
   let cfg: SandboxJson = {};
   try {
-    cfg = loadConfig(ctx.cwd);
+    cfg = loadConfig(ctx.cwd, extraConfigCwds);
   } catch (e) {
     ctx.ui.notify(
       `Sandbox: ${e instanceof Error ? e.message : e} (using defaults)`,
