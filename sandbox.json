@@ -1,4 +1,5 @@
 {
+  "write": ["~/.local/share/qmd"],
   "denyRead": [
     "~/.ssh",
     "~/.gnupg",

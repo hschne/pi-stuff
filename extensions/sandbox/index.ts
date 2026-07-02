@@ -46,6 +46,9 @@
  *   /sandbox disable  - disable the sandbox for this session and reload.
  *   /sandbox enable   - re-enable the sandbox for this session and reload.
  *
+ * Session command overrides are persisted in the current session, so resume
+ * restores the same sandbox status.
+ *
  * Requirements (Linux): bwrap.
  */
 
@@ -63,8 +66,13 @@ import {
 
 const STATUS_KEY = "sandbox";
 const STATUS_ICON = "";
-/** Session override set by /sandbox enable|disable. Trumps config either way. */
-const OVERRIDE_ENV = "PI_SANDBOX_OVERRIDE"; // "disable" | "enable" | unset
+const STATE_ENTRY_TYPE = "sandbox-state";
+
+type SandboxOverride = "disable" | "enable";
+
+interface SandboxState {
+  override?: SandboxOverride;
+}
 
 interface SandboxJson {
   enabled?: boolean;
@@ -83,6 +91,8 @@ interface Policy {
 
 let active = false;
 let policy: Policy | undefined;
+/** Session override set by /sandbox enable|disable. Trumps config either way. */
+let sessionOverride: SandboxOverride | undefined;
 
 function configPaths(cwd: string): string[] {
   return [
@@ -269,6 +279,29 @@ function summarize(items: string[], max = 3): string {
   return `${items.slice(0, max).join(", ")} (+${items.length - max} more)`;
 }
 
+function isSandboxOverride(value: unknown): value is SandboxOverride {
+  return value === "disable" || value === "enable";
+}
+
+function restoreSessionOverride(ctx: ExtensionContext): void {
+  sessionOverride = undefined;
+  for (const entry of ctx.sessionManager.getBranch()) {
+    if (entry.type !== "custom" || entry.customType !== STATE_ENTRY_TYPE) {
+      continue;
+    }
+    const override = (entry.data as SandboxState | undefined)?.override;
+    if (isSandboxOverride(override)) sessionOverride = override;
+  }
+}
+
+function persistSessionOverride(
+  pi: ExtensionAPI,
+  override: SandboxOverride,
+): void {
+  sessionOverride = override;
+  pi.appendEntry<SandboxState>(STATE_ENTRY_TYPE, { override });
+}
+
 function showInfo(ctx: ExtensionCommandContext): void {
   if (!active || !policy) {
     ctx.ui.notify("Sandbox is disabled for this session.", "info");
@@ -295,7 +328,7 @@ function setStatus(ctx: ExtensionContext): void {
 function activate(ctx: ExtensionContext): void {
   active = false;
   policy = undefined;
-  const override = process.env[OVERRIDE_ENV];
+  const override = sessionOverride;
   if (override === "disable") {
     setStatus(ctx);
     return;
@@ -342,6 +375,12 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
     sessionCwd = ctx.cwd;
     localBash = createBashTool(sessionCwd);
+    restoreSessionOverride(ctx);
+    activate(ctx);
+  });
+
+  pi.on("session_tree", (_event, ctx) => {
+    restoreSessionOverride(ctx);
     activate(ctx);
   });
 
@@ -415,7 +454,7 @@ export default function (pi: ExtensionAPI) {
             ctx.ui.notify("Sandbox is already disabled.", "info");
             return;
           }
-          process.env[OVERRIDE_ENV] = "disable";
+          persistSessionOverride(pi, "disable");
           active = false;
           policy = undefined;
           ctx.ui.setStatus(STATUS_KEY, undefined);
@@ -430,7 +469,7 @@ export default function (pi: ExtensionAPI) {
             ctx.ui.notify("Sandbox is already enabled.", "info");
             return;
           }
-          process.env[OVERRIDE_ENV] = "enable";
+          persistSessionOverride(pi, "enable");
           ctx.ui.notify("Sandbox enabling. Reloading…", "warning");
           await ctx.reload();
           return;
