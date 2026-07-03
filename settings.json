@@ -9,7 +9,8 @@
     "npm:pi-mcp-adapter",
     "npm:pi-prompt-template-model",
     "npm:pi-subagents",
-    "npm:pi-web-access"
+    "npm:pi-web-access",
+    "npm:pi-intercom"
   ],
   "defaultThinkingLevel": "high",
   "hideThinkingBlock": false,
@@ -17,7 +18,8 @@
     "anthropic/claude-opus-4-8",
     "anthropic/claude-sonnet-4-6",
     "openai-codex/gpt-5.5",
-    "openai-codex/gpt-5.4-mini"
+    "openai-codex/gpt-5.4-mini",
+    "openrouter/z-ai/glm-5.2"
   ],
   "treeFilterMode": "default",
   "enableSkillCommands": false,

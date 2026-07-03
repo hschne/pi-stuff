@@ -46,6 +46,8 @@ If rebase conflicts occur:
 
 If the user's instructions conflict with any rule in this document, ask for explicit confirmation before overriding. Only then execute their instructions.
 
+## Intercom
+
 <pi-intercom>
 Coordinate with other local pi sessions on related codebases. Use `/skill:pi-intercom` for patterns.
 
