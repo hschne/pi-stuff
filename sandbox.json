@@ -1,5 +1,11 @@
 {
-  "write": ["~/.local/share/qmd", "~/.cache/qmd"],
+  "write": [
+    "~/.local/share/qmd",
+    "~/.cache/qmd",
+    "~/.local/state/mise",
+    "~/.local/state/hk",
+    "~/.cache/mise"
+  ],
   "denyRead": [
     "~/.ssh",
     "~/.gnupg",
