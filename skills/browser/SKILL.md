@@ -18,6 +18,13 @@ Two backends drive the same system Chromium (`/usr/bin/chromium`). Pick by task:
 Default backend. Installed via mise and pinned to the system Chromium, so do not
 run `agent-browser install`.
 
+Always use an isolated profile so a running Chromium or stale lock on the default
+profile can't block launch:
+
+```bash
+export AGENT_BROWSER_PROFILE="$HOME/.cache/agent-browser-profile"
+```
+
 Get the command set and flags from the CLI rather than guessing — it serves docs
 matching the installed version:
 
@@ -29,7 +36,7 @@ agent-browser skills get dogfood     # exploratory testing / QA
 ## chrome-devtools MCP
 
 Use the `chrome-devtools` MCP tools for debugging and performance (network,
-console, traces, Core Web Vitals) or if the user explicitly requests it. 
+console, traces, Core Web Vitals) or if the user explicitly requests it.
 
 ## References
 
