@@ -5,33 +5,22 @@ description: Drive a real browser to automate, test, scrape, screenshot, or debu
 
 # browser
 
-Two backends drive the same system Chromium (`/usr/bin/chromium`). Pick by task:
+Two MCP backends drive the same system Chromium (`/usr/bin/chromium`). Pick by task:
 
-| Task                                                  | Backend                                             |
-| ----------------------------------------------------- | --------------------------------------------------- |
-| Navigate, click, fill, scrape, screenshot, test flows | `agent-browser` CLI                                 |
-| Debug: network, console, DOM, performance traces      | `chrome-devtools` MCP                               |
-| Co-work in a browser a human has open                 | `agent-browser` attach → `references/co-working.md` |
+| Task                                                  | Backend                    |
+| ----------------------------------------------------- | -------------------------- |
+| Navigate, click, fill, scrape, screenshot, test flows | `playwright` MCP           |
+| Debug: network, console, DOM, performance traces      | `chrome-devtools` MCP      |
+| Co-work in a browser a human has open                 | `references/co-working.md` |
 
-## agent-browser CLI
+## playwright MCP
 
-Default backend. Installed via mise and pinned to the system Chromium, so do not
-run `agent-browser install`.
+Default backend. Runs headless against the system Chromium. Use the
+`browser_*` tools (`browser_navigate`, `browser_snapshot`, `browser_click`,
+`browser_type`, `browser_fill_form`, `browser_take_screenshot`, etc.).
 
-Always use an isolated profile so a running Chromium or stale lock on the default
-profile can't block launch:
-
-```bash
-export AGENT_BROWSER_PROFILE="$HOME/.cache/agent-browser-profile"
-```
-
-Get the command set and flags from the CLI rather than guessing — it serves docs
-matching the installed version:
-
-```bash
-agent-browser skills get core        # workflows + command reference
-agent-browser skills get dogfood     # exploratory testing / QA
-```
+Prefer `browser_snapshot` (accessibility tree) over screenshots for driving
+actions — it gives stable element refs to target.
 
 ## chrome-devtools MCP
 
@@ -43,3 +32,6 @@ console, traces, Core Web Vitals) or if the user explicitly requests it.
 | Topic      | When to Read                                  | Reference                  |
 | ---------- | --------------------------------------------- | -------------------------- |
 | co-working | Attaching to or opening a shared live browser | `references/co-working.md` |
+
+</content>
+</invoke>

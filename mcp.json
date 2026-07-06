@@ -1,5 +1,15 @@
 {
   "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--executable-path",
+        "/usr/bin/chromium"
+      ]
+    },
     "chrome-devtools": {
       "command": "npx",
       "args": [

@@ -3,37 +3,29 @@
 Trigger when the user mentions a shared browser, co-working in a browser,
 joining or attaching to a browser they have open, or watching you drive it live.
 
-Attach connects over CDP to an already-running browser; it does not launch one,
-so the config's launch profile is ignored — you join the human's real live
+Attaching connects over CDP to an already-running browser; it does not launch
+one, so any headless launch config is ignored — you join the human's real live
 session.
 
-## Find an existing shared browser
+## Open a browser for co-working
 
-```bash
-agent-browser --auto-connect snapshot
-```
-
-`--auto-connect` reads Chrome's `DevToolsActivePort`, then probes ports 9222 and 9229. On success you are attached.
-
-With a known port:
-
-```bash
-agent-browser connect 9222
-agent-browser snapshot
-```
-
-## Open one for co-working
-
-A normal Chromium exposes no CDP port. Start it debug-enabled, headed, on the
-Agent profile, then attach:
+A normal Chromium exposes no CDP port. Start it debug-enabled and headed so both
+you and the human can see it:
 
 ```bash
 chromium --remote-debugging-port=9222 &
-agent-browser --cdp 9222 open https://example.com
 ```
+
+## Attach with chrome-devtools MCP
+
+The `chrome-devtools` MCP can connect to a running browser over CDP. Point it at
+the debugging port (`--browser-url http://127.0.0.1:9222`) instead of launching
+its own headless instance, then drive it with the normal tools.
 
 ## Rules
 
-- Attach with `--cdp <port>` or `--auto-connect`. 
-- Do not `agent-browser close` a browser the human is using — stop sending
-  commands and leave it open.
+- Attach to the human's running browser over its CDP port; do not launch a fresh
+  headless one.
+- Do not close a browser the human is using — stop sending commands and leave it
+open.
+</content>
