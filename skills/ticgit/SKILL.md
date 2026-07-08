@@ -1,6 +1,6 @@
 ---
 name: ticgit
-description: "Use TicGit (`ti`) for Git-native issue tracking, PRD/writeup workflows, ticket triage, implementation handoffs, dependencies, progress comments, reviews, and agent backlog loops. Use when creating, migrating, reading, implementing, closing, syncing, or automating tickets, PRDs, writeups, specs, or issue workflows with `ti`. Also use to publish slices produced by the generic issues skill into this tracker."
+description: "Use TicGit (`ti`) for Git-native issue tracking, spec/writeup workflows, ticket triage, implementation handoffs, dependencies, progress comments, reviews, and agent backlog loops. Use when creating, migrating, reading, implementing, closing, syncing, or automating tickets, specs, writeups, or ticket/spec workflows with `ti`. Also use to publish slices produced by the generic tickets skill into this tracker."
 ---
 
 # TicGit
@@ -16,7 +16,7 @@ When you need a flag you are unsure of, prefer `ti <command> --help` over guessi
 ## Core Conventions
 
 - Read with `--markdown` (`ti list`, `ti next`, `ti show`); Markdown output includes context and suggested next commands.
-- PRDs, research, design notes, and evolving plans are `ti writeup`s. Actionable vertical slices are tickets.
+- Specs, research, design notes, and evolving plans are `ti writeup`s. Actionable vertical slices are tickets.
 - Keep ticket descriptions to what/why plus acceptance criteria. Put implementation detail in `ti spec`, not the description. Check for a spec before implementing; add one if the path is unclear.
 - Track ordering with structural dependencies (`ti dep`), never prose alone. `ti next` skips tickets with unresolved dependencies — a "Blocked by" line in a description does nothing on its own.
 - Record meaningful findings and blockers as you go with `ti comment`.
@@ -27,26 +27,26 @@ When you need a flag you are unsure of, prefer `ti <command> --help` over guessi
 
 Give every piece of information one home so the three never duplicate or drift:
 
-- **Writeup (PRD)** — the durable, feature-wide design that spans many tickets: problem, solution, architecture, cross-cutting decisions, data-model shape, guardrails, testing strategy. Versioned. Keep it at the decision/architecture level.
+- **Writeup (Spec)** — the durable, feature-wide design that spans many tickets: problem, solution, architecture, cross-cutting decisions, data-model shape, guardrails, testing strategy. Versioned. Keep it at the decision/architecture level.
 - **Ticket description** — one slice's behavior and acceptance criteria: the definition of done. Avoid file paths and code; they go stale, and reviewers check against this.
 - **Spec** (`ti spec`) — one ticket's concrete build plan: exact files, classes, migrations, routes, step-by-step how, and gotchas for that slice. Mutable; rewrite or `ti spec --clear` freely as the plan changes.
 
 The common mistake is putting per-ticket file-level detail in the writeup, where it then duplicates the spec. Keep file-level _how_ in the spec and feature-level _why/what_ in the writeup. A spec is optional — add one when the path is not obvious from the description plus the writeup.
 
-## Mapping Issue/PRD Slices to TicGit
+## Mapping Ticket/Spec Slices to TicGit
 
-The issues skill (and most PRD/issue templates) produce slices with a recurring set of fields. Map them onto `ti` as follows so behavior, how-to, ordering, and context each land in the right place:
+The tickets skill (and most spec/ticket templates) produce slices with a recurring set of fields. Map them onto `ti` as follows so behavior, how-to, ordering, and context each land in the right place:
 
-| Slice field                         | TicGit target                                                                                                                           |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Title                               | first line of the `-F` file                                                                                                             |
-| What to build + Acceptance criteria | ticket description (the rest of the `-F` file)                                                                                          |
-| Implementation detail / the "how"   | `ti spec -t <id> -F <file>` — keep it out of the description                                                                            |
-| Blockers / "Blocked by"             | `ti dep <blocker-id> -t <id>` — structural; prose alone does not gate `ti next`                                                         |
-| Assets / URLs                       | inline in the description, or `ti comment` for ongoing notes                                                                            |
-| Parent / source PRD                 | `ti writeup link <writeup-id> <ticket-id>` for PRD context; `ti new --subissue <parent-id>` only when a real parent ticket (epic) helps |
+| Slice field                         | TicGit target                                                                                                                            |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Title                               | first line of the `-F` file                                                                                                              |
+| What to build + Acceptance criteria | ticket description (the rest of the `-F` file)                                                                                           |
+| Implementation detail / the "how"   | `ti spec -t <id> -F <file>` — keep it out of the description                                                                             |
+| Blockers / "Blocked by"             | `ti dep <blocker-id> -t <id>` — structural; prose alone does not gate `ti next`                                                          |
+| Assets / URLs                       | inline in the description, or `ti comment` for ongoing notes                                                                             |
+| Parent / source spec                | `ti writeup link <writeup-id> <ticket-id>` for spec context; `ti new --subissue <parent-id>` only when a real parent ticket (epic) helps |
 
-Prefer writeup-to-ticket links over subissues for PRD context, because writeups preserve long-form version history.
+Prefer writeup-to-ticket links over subissues for spec context, because writeups preserve long-form version history.
 
 ## Publishing a Batch of Linked Slices
 
@@ -71,18 +71,18 @@ Confirm the graph is real, not just prose — especially the first time tickets 
 
 Tickets are local until shared. Run `ti sync` when you intentionally want to pull/push ticket metadata with the remote; decide on this explicitly rather than assuming tickets propagate.
 
-## PRD / Planning Workflow
+## Spec / Planning Workflow
 
-1. Capture the PRD or long-form plan as a writeup:
+1. Capture the spec or long-form plan as a writeup:
    ```sh
-   ti writeup new --title "PRD: <name>" --file /tmp/prd.md --tags prd,<area>
+   ti writeup new --title "Spec: <name>" --file /tmp/spec.md --tags spec,<area>
    ```
 2. Revise by appending versions, then read the full history:
    ```sh
-   ti writeup edit <writeup-id> --file /tmp/revised-prd.md
+   ti writeup edit <writeup-id> --file /tmp/revised-spec.md
    ti writeup show <writeup-id> --all
    ```
-3. Slice the writeup into thin, independently verifiable tickets — use the **issues** skill for the slicing method — then publish, spec, link, and wire them as in the sections above.
+3. Slice the writeup into thin, independently verifiable tickets — use the **tickets** skill for the slicing method — then publish, spec, link, and wire them as in the sections above.
 
 ## Implementing One Ticket
 
@@ -110,13 +110,13 @@ bash ~/.pi/agent/skills/ticgit/scripts/open-ticket-count.sh
 
 A worker loop should implement exactly one `ti next` ticket per iteration, claim it, verify it, close it, and stop when the helper returns `0`.
 
-## Migration From File-Based Issues
+## Migration From File-Based Tickets
 
-When replacing Markdown issue files, preserve information before deleting files:
+When replacing Markdown ticket or issue files, preserve information before deleting files:
 
-- PRD files become `ti writeup`s tagged `prd`.
-- Open issue files become open tickets.
-- Done issue files become tickets that are immediately closed after preserving their content, unless historical migration is intentionally skipped.
+- Spec files become `ti writeup`s tagged `spec`.
+- Open ticket files become open tickets.
+- Done ticket files become tickets that are immediately closed after preserving their content, unless historical migration is intentionally skipped.
 - Filename priority becomes `ti priority`; prose blockers become `ti dep`; moving to `done/` becomes `ti close`.
 
 After migration, update project agent instructions to point to TicGit and remove stale references so future agents do not use both systems.

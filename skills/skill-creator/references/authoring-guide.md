@@ -31,7 +31,7 @@ Rules:
 - `description`: the primary trigger mechanism. Include both what the skill does AND when to use it. All "when to use" info goes here, not in the body.
 - `description`: max 1024 characters. No angle brackets.
 - `description`: write in imperative form — "Use when…" not "This skill helps with…"
-- `description`: be slightly pushy — skills tend to under-trigger. Include synonyms and alternate phrasings for the task.
+- `description`: front-load the skill's leading word and include one trigger per genuinely distinct branch. Avoid synonym lists that restate the same branch.
 
 **Good description:**
 
@@ -115,6 +115,28 @@ responses, letting the same action handle full-page and partial updates.
 ALWAYS use respond_to blocks. NEVER render turbo_stream inline.
 ```
 
+### Prompt the Positive
+
+Negation steers by naming the behavior you want to avoid. That forbidden behavior becomes more available in context, while the negating word is weak. State the target behavior instead.
+
+**Good:**
+
+```md
+Write one-line comments that explain non-obvious constraints.
+```
+
+**Bad:**
+
+```md
+Don't write verbose comments.
+```
+
+Keep prohibitions only for hard guardrails you cannot phrase positively, and pair them with the desired behavior.
+
+### Audit Negative Space
+
+What a skill leaves unsaid is not neutral; it delegates the choice to the agent's priors. Read drafts for silences around sequencing, output format, verification, and handoff. Fill the silence when predictable behavior matters, or leave it open as an explicit branch when the agent should choose.
+
 ### Use Commands, Not Wishes
 
 Instructions without verification commands are suggestions. Include the exact command to run and the expected exit condition.
@@ -144,7 +166,7 @@ Leaks make the general skill wrong the moment the specific tool changes, and the
 **Good:**
 
 ```md
-<!-- issues skill -->
+<!-- tickets skill -->
 
 Express dependencies using the tracker's native dependency feature, not prose.
 Publishing mechanics belong to the issue tracker's own skill.
@@ -157,7 +179,7 @@ Publishing mechanics belong to the issue tracker's own skill.
 **Bad:**
 
 ```md
-<!-- issues skill, hardcoding one tracker's commands and template -->
+<!-- tickets skill, hardcoding one tracker's commands and template -->
 
 ## Blocked by
 
@@ -291,6 +313,8 @@ Avoid:
 - Nested references several files deep
 - Offering many equivalent options without guidance
 - Prose paragraphs without actionable commands
+- Negated instructions that name the unwanted behavior instead of the desired behavior
+- Silent branches where the agent must guess sequencing, output format, verification, or handoff
 - Ambiguous directives ("be careful", "where possible")
 - Contradictory rules without explicit priority ordering
 - Style guides without enforcement commands (linter, formatter)
@@ -304,6 +328,7 @@ Before finishing a skill, verify:
 
 - [ ] Frontmatter has valid `name` and `description`
 - [ ] `description` says what the skill does AND when to use it
+- [ ] `description` front-loads the leading word and has one trigger per branch
 - [ ] `description` is under 1024 characters
 - [ ] SKILL.md is under 500 lines
 - [ ] Long details moved into reference files (one level deep)

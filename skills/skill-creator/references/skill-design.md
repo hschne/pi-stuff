@@ -49,6 +49,12 @@ Every step ends on a **completion criterion** — the condition that tells the a
 
 A demanding criterion also drives **legwork** — the digging the agent does within a step rather than offloading to the user. Raise it with a leading word (`comprehensive`, `relentless`) or a criterion that demands exhaustive work.
 
+## Steering failure modes
+
+**Negation** is steering by prohibition. Naming the forbidden behavior drags it into context, so phrase the target behavior positively. Keep a prohibition only for a hard guardrail you cannot phrase positively, and pair it with what to do instead.
+
+**Negative space** is the steering done by what the skill leaves unsaid. Omissions delegate choices to the agent's priors: sequencing, output format, verification, handoff, and branch selection. Fill a silence when predictable behavior matters; otherwise mark it as an explicit branch the agent may choose.
+
 ## Pruning
 
 Keep each meaning in a **single source of truth** — one authoritative place, so changing the behaviour is a one-place edit.

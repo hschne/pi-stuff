@@ -10,6 +10,9 @@ Create effective skills through an interview-driven, eval-backed workflow.
 ## Core Principles
 
 - **Explain the why.** The agent using the skill is smart. Explain reasoning so it generalizes — avoid heavy-handed MUSTs and rigid structures when reasoning works better.
+- **Prompt the positive.** Negation names the behavior you want to avoid and makes it more available. State the target behavior; keep prohibitions only for hard guardrails and pair them with what to do instead.
+- **Audit negative space.** Omissions delegate decisions to the agent's priors. Decide whether each silence should be filled, left open as an explicit branch, or pushed to reference.
+- **Use leading words.** Front-load the key concept in descriptions and bodies; collapse synonym lists into one trigger per real branch.
 - **Commands over prose.** "Run `pytest -v`" beats "make sure tests pass." Instructions without verification commands are suggestions, not rules.
 - **Front-load critical content.** Attention follows a U-curve: strong at the top and bottom, weak in the middle. Put the most important rules first.
 - **Scripts over repeated work.** If every test run reinvents the same helper, bundle it as a script.

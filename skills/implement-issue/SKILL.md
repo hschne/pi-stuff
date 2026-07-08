@@ -23,7 +23,7 @@ Implement exactly one existing issue from the current project.
 
 ## Workflow
 
-1. Read `AGENTS.md` and the current PRD for full context.
+1. Read `AGENTS.md` and the current spec/writeup for full context.
 2. Run `git log -n 5 --format="%H%n%ad%n%B---" --date=short` for recently implemented issues.
 3. Find open issues.
 4. If there are no open issues, output exactly `No open issues` and stop.
