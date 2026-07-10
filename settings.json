@@ -1,9 +1,9 @@
 {
   "quietStartup": true,
   "defaultProjectTrust": "always",
-  "lastChangelogVersion": "0.80.2",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5",
+  "lastChangelogVersion": "0.80.6",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-opus-4-8",
   "theme": "tokyo-night",
   "packages": [
     "npm:pi-mcp-adapter",
@@ -12,14 +12,15 @@
     "npm:pi-web-access",
     "npm:pi-intercom"
   ],
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "minimal",
   "hideThinkingBlock": false,
   "enabledModels": [
     "anthropic/claude-opus-4-8",
     "anthropic/claude-sonnet-4-6",
-    "openai-codex/gpt-5.5",
-    "openai-codex/gpt-5.4-mini",
-    "openrouter/z-ai/glm-5.2"
+    "openrouter/z-ai/glm-5.2",
+    "openai-codex/gpt-5.6-terra",
+    "openai-codex/gpt-5.6-luna",
+    "openai-codex/gpt-5.6-sol"
   ],
   "treeFilterMode": "default",
   "enableSkillCommands": false,

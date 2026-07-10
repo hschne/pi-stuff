@@ -4,7 +4,8 @@
     "~/.cache/qmd",
     "~/.local/state/mise",
     "~/.local/state/hk",
-    "~/.cache/mise"
+    "~/.cache/mise",
+    "~/.cache/gh"
   ],
   "denyRead": [
     "~/.ssh",

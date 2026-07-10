@@ -7,7 +7,7 @@
         "@playwright/mcp@latest",
         "--headless",
         "--executable-path",
-        "/usr/bin/chromium"
+        "/run/current-system/sw/bin/chromium"
       ]
     },
     "chrome-devtools": {
@@ -17,7 +17,7 @@
         "chrome-devtools-mcp@latest",
         "--headless",
         "--executablePath",
-        "/usr/bin/chromium",
+        "/run/current-system/sw/bin/chromium",
         "--no-usageStatistics",
         "--no-performanceCrux"
       ]
