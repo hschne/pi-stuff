@@ -38,16 +38,23 @@
  *     "write":    ["~/.local/share/pnpm"],  // extra writable paths
  *     "denyRead": ["~/extra-secret"],       // extra read masks
  *     "allowEnv": ["DATABASE_URL"],         // secret env vars to KEEP for this project
- *     "scrubEnv": ["EXTRA_TOKEN"]           // extra env vars to strip
+ *     "scrubEnv": ["EXTRA_TOKEN"],          // extra env vars to strip
+ *     "alias": { "gh": ["~/.cache/gh", "~/.config/gh"] }
  *   }
  *
- * Commands:
- *   /sandbox info     - show the active policy.
- *   /sandbox disable  - disable the sandbox for this session and reload.
- *   /sandbox enable   - re-enable the sandbox for this session and reload.
+ * `alias` is read only from the global config, never a project's config,
+ * because a grant can override a global read mask.
  *
- * Session command overrides are persisted in the current session, so resume
- * restores the same sandbox status.
+ * Commands:
+ *   /sandbox info          - show the active policy.
+ *   /sandbox grant <path>  - grant a directory for this session and reload.
+ *   /sandbox grant <alias> - grant global alias directories and reload.
+ *   /sandbox reset         - remove session grants and reload.
+ *   /sandbox disable       - disable the sandbox for this session and reload.
+ *   /sandbox enable        - re-enable the sandbox for this session and reload.
+ *
+ * Session command overrides and grants are persisted in the current session,
+ * so resume restores the same sandbox status and grants.
  *
  * Requirements (Linux): bwrap.
  */
@@ -72,6 +79,7 @@ type SandboxOverride = "disable" | "enable";
 
 interface SandboxState {
   override?: SandboxOverride;
+  grants?: string[];
 }
 
 interface SandboxJson {
@@ -80,19 +88,21 @@ interface SandboxJson {
   denyRead?: string[];
   allowEnv?: string[];
   scrubEnv?: string[];
+  alias?: Record<string, string[]>;
 }
 
 interface Policy {
   cwd: string;
   writeDirs: string[];
+  grantDirs: string[];
   denyRead: string[];
   scrubEnv: Set<string>;
 }
 
 let active = false;
 let policy: Policy | undefined;
-/** Session override set by /sandbox enable|disable. Trumps config either way. */
-let sessionOverride: SandboxOverride | undefined;
+/** Session state set by /sandbox commands. Trumps config where applicable. */
+let sessionState: SandboxState = {};
 
 function configPaths(cwd: string, extraCwds: string[] = []): string[] {
   const projectCwds = [...new Set([cwd, ...extraCwds])];
@@ -115,7 +125,7 @@ function readConfigFile(p: string): SandboxJson {
 /** Merge global + project config. Scalars override; arrays concatenate. */
 function loadConfig(cwd: string, extraCwds: string[] = []): SandboxJson {
   const merged: SandboxJson = {};
-  for (const p of configPaths(cwd, extraCwds)) {
+  for (const [index, p] of configPaths(cwd, extraCwds).entries()) {
     if (!existsSync(p)) continue;
     const cfg = readConfigFile(p);
     if (cfg.enabled !== undefined) merged.enabled = cfg.enabled;
@@ -123,6 +133,7 @@ function loadConfig(cwd: string, extraCwds: string[] = []): SandboxJson {
     merged.denyRead = [...(merged.denyRead ?? []), ...(cfg.denyRead ?? [])];
     merged.allowEnv = [...(merged.allowEnv ?? []), ...(cfg.allowEnv ?? [])];
     merged.scrubEnv = [...(merged.scrubEnv ?? []), ...(cfg.scrubEnv ?? [])];
+    if (index === 0 && cfg.alias !== undefined) merged.alias = cfg.alias;
   }
   return merged;
 }
@@ -153,7 +164,11 @@ function isInside(base: string, target: string): boolean {
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 }
 
-function buildPolicy(cfg: SandboxJson, cwd: string): Policy {
+function buildPolicy(
+  cfg: SandboxJson,
+  cwd: string,
+  sessionGrants: string[],
+): Policy {
   const physicalCwd = physicalPath(cwd);
   const launchCwd = physicalPath(process.cwd());
   const writes = (cfg.write ?? []).map((e) => physicalPath(expand(e, cwd)));
@@ -162,19 +177,25 @@ function buildPolicy(cfg: SandboxJson, cwd: string): Policy {
   for (const keep of cfg.allowEnv ?? []) scrubEnv.delete(keep);
   return {
     cwd: physicalCwd,
-    writeDirs: [...new Set([physicalCwd, launchCwd, "/tmp", ...writes])],
+    writeDirs: [
+      ...new Set([physicalCwd, launchCwd, "/tmp", ...writes, ...sessionGrants]),
+    ],
+    grantDirs: sessionGrants,
     denyRead: denies,
     scrubEnv,
   };
 }
 
+function isGranted(p: Policy, abs: string): boolean {
+  return p.grantDirs.some((dir) => isInside(dir, abs));
+}
+
 function isDenied(p: Policy, abs: string): boolean {
-  return p.denyRead.some((dir) => isInside(dir, abs));
+  return !isGranted(p, abs) && p.denyRead.some((dir) => isInside(dir, abs));
 }
 
 function canWrite(p: Policy, abs: string): boolean {
-  if (isDenied(p, abs)) return false;
-  return p.writeDirs.some((dir) => isInside(dir, abs));
+  return !isDenied(p, abs) && p.writeDirs.some((dir) => isInside(dir, abs));
 }
 
 function resolveTarget(target: string | undefined, cwd: string): string {
@@ -184,6 +205,28 @@ function resolveTarget(target: string | undefined, cwd: string): string {
   return path.isAbsolute(cleaned)
     ? path.normalize(cleaned)
     : path.resolve(cwd, cleaned);
+}
+
+function outermostDirs(dirs: string[]): string[] {
+  return dirs.filter(
+    (dir, index) =>
+      dirs.findIndex((other) => other !== dir && isInside(other, dir)) === -1,
+  );
+}
+
+function createGrantMountTargets(
+  args: string[],
+  maskedDirs: string[],
+  grantDirs: string[],
+): void {
+  for (const grant of grantDirs) {
+    const mask = maskedDirs.find((dir) => isInside(dir, grant));
+    if (!mask) continue;
+    const parts = path.relative(mask, grant).split(path.sep);
+    for (let index = 1; index <= parts.length; index++) {
+      args.push("--dir", path.join(mask, ...parts.slice(0, index)));
+    }
+  }
 }
 
 /** bwrap arguments enforcing the filesystem policy (network is left untouched). */
@@ -203,11 +246,26 @@ function buildBwrapArgs(p: Policy): string[] {
   for (const dir of p.writeDirs) {
     if (existsSync(dir)) args.push("--bind", dir, dir);
   }
-  // Mask secrets AFTER writable binds so they win. Existing paths only.
-  for (const dir of p.denyRead) {
-    if (!existsSync(dir)) continue;
-    if (statSync(dir).isDirectory()) args.push("--tmpfs", dir);
-    else args.push("--ro-bind", "/dev/null", dir);
+  // A grant can expose a child of a masked directory. Mask first, then recreate
+  // the mount target and bind the explicit grant back over the mask.
+  const masks = outermostDirs(
+    p.denyRead.filter(
+      (deny) =>
+        existsSync(deny) && !p.grantDirs.some((grant) => isInside(grant, deny)),
+    ),
+  );
+  const maskedDirs: string[] = [];
+  for (const dir of masks) {
+    if (statSync(dir).isDirectory()) {
+      args.push("--tmpfs", dir);
+      maskedDirs.push(dir);
+    } else {
+      args.push("--ro-bind", "/dev/null", dir);
+    }
+  }
+  createGrantMountTargets(args, maskedDirs, p.grantDirs);
+  for (const dir of p.grantDirs) {
+    if (existsSync(dir)) args.push("--bind", dir, dir);
   }
   args.push("--chdir", p.cwd);
   return args;
@@ -287,23 +345,47 @@ function isSandboxOverride(value: unknown): value is SandboxOverride {
   return value === "disable" || value === "enable";
 }
 
-function restoreSessionOverride(ctx: ExtensionContext): void {
-  sessionOverride = undefined;
+function isDirectoryList(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((entry) => typeof entry === "string")
+  );
+}
+
+function restoreSessionState(ctx: ExtensionContext): void {
+  sessionState = {};
   for (const entry of ctx.sessionManager.getBranch()) {
     if (entry.type !== "custom" || entry.customType !== STATE_ENTRY_TYPE) {
       continue;
     }
-    const override = (entry.data as SandboxState | undefined)?.override;
-    if (isSandboxOverride(override)) sessionOverride = override;
+    const state = entry.data as SandboxState | undefined;
+    if (isSandboxOverride(state?.override))
+      sessionState.override = state.override;
+    if (isDirectoryList(state?.grants)) sessionState.grants = state.grants;
   }
 }
 
-function persistSessionOverride(
-  pi: ExtensionAPI,
-  override: SandboxOverride,
-): void {
-  sessionOverride = override;
-  pi.appendEntry<SandboxState>(STATE_ENTRY_TYPE, { override });
+function persistSessionState(pi: ExtensionAPI): void {
+  pi.appendEntry<SandboxState>(STATE_ENTRY_TYPE, sessionState);
+}
+
+function resolveGrantDirectories(
+  input: string,
+  cfg: SandboxJson,
+  cwd: string,
+): string[] {
+  const entries = cfg.alias?.[input] ?? [input];
+  if (!isDirectoryList(entries)) {
+    throw new Error(`Invalid global sandbox alias: ${input}`);
+  }
+  const dirs = [
+    ...new Set(entries.map((entry) => physicalPath(expand(entry, cwd)))),
+  ];
+  for (const dir of dirs) {
+    if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+      throw new Error(`Grant must be an existing directory: ${dir}`);
+    }
+  }
+  return dirs;
 }
 
 function showInfo(ctx: ExtensionCommandContext): void {
@@ -311,11 +393,16 @@ function showInfo(ctx: ExtensionCommandContext): void {
     ctx.ui.notify("Sandbox is disabled for this session.", "info");
     return;
   }
-  const masked = policy.denyRead.filter((d) => existsSync(d));
+  const masked = policy.denyRead.filter(
+    (dir) =>
+      existsSync(dir) &&
+      !policy.grantDirs.some((grant) => isInside(grant, dir)),
+  );
   const lines = [
     "Sandbox active (pure bwrap)",
     "",
     `Writable:   ${summarize(policy.writeDirs)}`,
+    `Grants:     ${policy.grantDirs.length ? summarize(policy.grantDirs) : "(none)"}`,
     `Read masks: ${masked.length ? summarize(masked) : "(none present)"}`,
     `Env scrub:  ${policy.scrubEnv.size} secret var(s) stripped from bash`,
     "Network:    full (no per-domain allowlist)",
@@ -332,7 +419,7 @@ function setStatus(ctx: ExtensionContext): void {
 function activate(ctx: ExtensionContext): void {
   active = false;
   policy = undefined;
-  const override = sessionOverride;
+  const override = sessionState.override;
   if (override === "disable") {
     setStatus(ctx);
     return;
@@ -369,7 +456,7 @@ function activate(ctx: ExtensionContext): void {
     setStatus(ctx);
     return;
   }
-  policy = buildPolicy(cfg, ctx.cwd);
+  policy = buildPolicy(cfg, ctx.cwd, sessionState.grants ?? []);
   active = true;
   setStatus(ctx);
 }
@@ -381,12 +468,12 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
     sessionCwd = ctx.cwd;
     localBash = createBashTool(sessionCwd);
-    restoreSessionOverride(ctx);
+    restoreSessionState(ctx);
     activate(ctx);
   });
 
   pi.on("session_tree", (_event, ctx) => {
-    restoreSessionOverride(ctx);
+    restoreSessionState(ctx);
     activate(ctx);
   });
 
@@ -448,19 +535,68 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand("sandbox", {
-    description: "Sandbox control: /sandbox [info|enable|disable]",
+    description: "Sandbox control: /sandbox [info|grant|reset|enable|disable]",
     handler: async (args: string, ctx: ExtensionCommandContext) => {
-      const sub = args.trim().toLowerCase() || "info";
+      const input = args.trim();
+      const separator = input.search(/\s/);
+      const sub =
+        (separator === -1 ? input : input.slice(0, separator)).toLowerCase() ||
+        "info";
+      const value = separator === -1 ? "" : input.slice(separator).trim();
       switch (sub) {
         case "info":
           showInfo(ctx);
+          return;
+        case "grant": {
+          if (!active) {
+            ctx.ui.notify(
+              "Sandbox is disabled; enable it before granting access.",
+              "info",
+            );
+            return;
+          }
+          if (!value) {
+            ctx.ui.notify("Usage: /sandbox grant <directory-or-alias>", "info");
+            return;
+          }
+          let cfg: SandboxJson;
+          try {
+            const launchCwd = process.cwd();
+            const extraConfigCwds = launchCwd !== ctx.cwd ? [launchCwd] : [];
+            cfg = loadConfig(ctx.cwd, extraConfigCwds);
+            const dirs = resolveGrantDirectories(value, cfg, ctx.cwd);
+            sessionState.grants = [
+              ...new Set([...(sessionState.grants ?? []), ...dirs]),
+            ];
+          } catch (e) {
+            ctx.ui.notify(
+              `Sandbox: ${e instanceof Error ? e.message : e}`,
+              "error",
+            );
+            return;
+          }
+          persistSessionState(pi);
+          ctx.ui.notify("Sandbox grant added. Reloading…", "warning");
+          await ctx.reload();
+          return;
+        }
+        case "reset":
+          if (!sessionState.grants?.length) {
+            ctx.ui.notify("Sandbox has no session grants.", "info");
+            return;
+          }
+          sessionState.grants = [];
+          persistSessionState(pi);
+          ctx.ui.notify("Sandbox grants reset. Reloading…", "warning");
+          await ctx.reload();
           return;
         case "disable":
           if (!active) {
             ctx.ui.notify("Sandbox is already disabled.", "info");
             return;
           }
-          persistSessionOverride(pi, "disable");
+          sessionState.override = "disable";
+          persistSessionState(pi);
           active = false;
           policy = undefined;
           ctx.ui.setStatus(STATUS_KEY, undefined);
@@ -475,12 +611,16 @@ export default function (pi: ExtensionAPI) {
             ctx.ui.notify("Sandbox is already enabled.", "info");
             return;
           }
-          persistSessionOverride(pi, "enable");
+          sessionState.override = "enable";
+          persistSessionState(pi);
           ctx.ui.notify("Sandbox enabling. Reloading…", "warning");
           await ctx.reload();
           return;
         default:
-          ctx.ui.notify("Usage: /sandbox [info|enable|disable]", "info");
+          ctx.ui.notify(
+            "Usage: /sandbox [info|grant <directory-or-alias>|reset|enable|disable]",
+            "info",
+          );
       }
     },
   });
