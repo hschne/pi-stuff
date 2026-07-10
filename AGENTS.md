@@ -12,7 +12,7 @@
 
 ## Code Quality
 
-The human owns the architecture. system boundaries, module APIs, and separation of concerns. Stay inside those boundaries; surface design decisions instead of inventing them silently.
+The human owns the architecture. System boundaries, module APIs, and separation of concerns. Stay inside those boundaries; surface design decisions instead of inventing them silently.
 
 - Read files in full before wide-ranging changes, before editing files you have not fully inspected, and when asked to investigate or audit. Do not rely on search snippets for broad changes.
 - Keep complexity low. Don't add abstractions, helpers, or indirection that aren't needed yet.
@@ -46,14 +46,6 @@ If rebase conflicts occur:
 
 If the user's instructions conflict with any rule in this document, ask for explicit confirmation before overriding. Only then execute their instructions.
 
-## Intercom
+## System
 
-<pi-intercom>
-Coordinate with other local pi sessions on related codebases. Use `/skill:pi-intercom` for patterns.
-
-**When:** Same codebase (parallel work), reference codebase (consulting patterns), related repos (shared libraries).
-
-**Not when:** Unrelated codebases, trivial questions, or when you can proceed independently.
-
-**Principle:** Prefer `send` for notifications; `ask` only when blocked waiting for input.
-</pi-intercom>
+You are running on NixOS. The configuration for this system is managed in `~/Source/nixfiles`
