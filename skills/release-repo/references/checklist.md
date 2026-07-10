@@ -7,6 +7,7 @@ What to inventory in Phase 1. Mark each item present / missing / inconsistent.
 - **README** — exists, and its install/usage instructions reference the real repo URL (not a placeholder like `dir = "/path/to/..."` or `yourname/repo`). Cross-check every documented command against what the code actually defines; drop references to removed commands.
 - **LICENSE** — a real file at the repo root. If source headers claim a license ("MIT License Copyright …") but no file exists, that's an inconsistency to fix. Infer the holder from `git config user.name` / `user.email`.
 - **Description + topics** — set on GitHub (`gh repo view --json description,repositoryTopics`).
+- **Screenshot + social preview** — a visual product should show itself running in the README, and any repo with a README screenshot should also have a matching social-preview card.
 - **Contributing** — at minimum a short section in the README; a separate `CONTRIBUTING.md` only if the project warrants it.
 - **.gitignore** — covers build artifacts, logs, and editor/LSP dirs.
 - **Stray files** — fixtures, scratch scripts, `*.log`, editor state in the repo root. Move fixtures under a `doc/`, `fixtures/`, or `examples/` dir; remove logs.
@@ -23,7 +24,7 @@ Lighter-weight items worth surfacing; add the ones that fit the project rather t
 - **README badges** — CI status, latest version, license.
 - **Dependency automation** — `.github/dependabot.yml` or renovate.
 - **Community health** — `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue/PR templates under `.github/`.
-- **Discoverability** — homepage URL and a social-preview image on GitHub.
+- **Website / homepage** — decide whether the project warrants one (a docs site, live demo, or landing page) and, if so, set the repo homepage with `gh repo edit --homepage <url>`. Not every repo needs one; a library or plugin often just points at its README.
 - **Manifest parity** — the package manifest's repository URL, license field, and keywords match the actual repo and GitHub metadata.
 - **Reproducibility** — committed lockfile and an `.editorconfig`.
 
