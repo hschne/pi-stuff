@@ -22,5 +22,8 @@
     "~/.docker",
     "~/.kube"
   ],
-  "scrubEnv": []
+  "scrubEnv": [],
+  "alias": {
+    "gh": ["~/.cache/gh", "~/.config/gh"]
+  }
 }
