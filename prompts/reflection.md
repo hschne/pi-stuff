@@ -1,6 +1,5 @@
 ---
 description: Reflect on the current session
-model: openai-codex/gpt-5.4-mini
 skill: reflection
 ---
 
