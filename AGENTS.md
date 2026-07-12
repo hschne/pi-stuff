@@ -19,6 +19,7 @@ The human owns the architecture. System boundaries, module APIs, and separation 
 - Inline single-line helpers that have only one call site.
 - Do not preserve backward compatibility unless the user asks for it.
 - Errors compound. Catch mistakes early rather than letting them accumulate across a session.
+- Do not call subagents unless the user explicitly requests subagent use.
 
 ## Git
 

@@ -177,10 +177,7 @@ function autoDeriveBgFromTheme(theme: any): void {
       try {
         const bgAnsi = theme.getBgAnsi("toolSuccessBg");
         const parsed = parseAnsiRgb(bgAnsi);
-        if (parsed) {
-          base = parsed;
-          BG_BASE = bgAnsi;
-        }
+        if (parsed) base = parsed;
       } catch {
         /* no toolSuccessBg — use black */
       }
@@ -413,19 +410,6 @@ let DEFAULT_DIFF_COLORS: DiffColors = {
 };
 
 function resolveDiffColors(theme?: any): DiffColors {
-  if (theme?.getBgAnsi && BG_BASE === BG_DEFAULT) {
-    try {
-      const bgAnsi = theme.getBgAnsi("toolSuccessBg");
-      const parsed = parseAnsiRgb(bgAnsi);
-      if (parsed) {
-        BG_BASE = bgAnsi;
-        RST = `\x1b[0m${BG_BASE}`;
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
   if (_autoDerivePending && theme?.getFgAnsi) {
     autoDeriveBgFromTheme(theme);
     _autoDerivePending = false;
@@ -1384,6 +1368,18 @@ export function registerDiffTools(pi: any): void {
     }
   }
 
+  /** Give only the header row the tool background. */
+  function headerWithBackground(value: string, theme: any): string {
+    try {
+      const background = theme.getBgAnsi?.("toolSuccessBg");
+      if (!background) return value;
+      const padding = " ".repeat(Math.max(0, termW() - strip(value).length));
+      return injectBg(`${value}${padding}`, [], background, background);
+    } catch {
+      return value;
+    }
+  }
+
   function themedSummary(added: number, removed: number, theme: any): string {
     const parts: string[] = [];
     if (added > 0) parts.push(theme.fg("success", `+${added}`));
@@ -1450,6 +1446,7 @@ export function registerDiffTools(pi: any): void {
       const isNew = ctx.state?._isNewFile ?? (!fp || !existsSync(fp));
       const label = isNew ? "create" : "write";
       const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
+      setToolBackground(text, theme);
       const hdr = header(label, fp, theme);
 
       // Streaming: show line count progress
@@ -1503,6 +1500,7 @@ export function registerDiffTools(pi: any): void {
 
     renderResult(result: any, opts: any, theme: any, ctx: any) {
       const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
+      setToolBackground(text, theme);
       const expanded = opts?.expanded ?? ctx.expanded ?? false;
 
       if (ctx.isError) {
@@ -1727,7 +1725,8 @@ export function registerDiffTools(pi: any): void {
       const fp = args?.path ?? args?.file_path ?? "";
       const operations = getEditOperations(args);
       const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-      const hdr = header("edit", fp, theme);
+      text.customBgFn = undefined;
+      const hdr = headerWithBackground(header("edit", fp, theme), theme);
 
       if (!(ctx.argsComplete && operations.length > 0)) {
         text.setText(hdr);
@@ -1748,7 +1747,11 @@ export function registerDiffTools(pi: any): void {
           renderSplit(diff, lg, maxLines, dc)
             .then((rendered) => {
               if (ctx.state._pk !== pk) return;
-              let out = `${hdr}\n${summarize(diff.added, diff.removed)}\n${rendered}`;
+              const indented = rendered
+                .split("\n")
+                .map((line) => ` ${line}`)
+                .join("\n");
+              let out = `${hdr}\n\n${indented}`;
               if (!expanded && diff.lines.length > COLLAPSED_DIFF_LINES) {
                 out += `\n${expandHint(theme)}`;
               }
@@ -1803,6 +1806,7 @@ export function registerDiffTools(pi: any): void {
 
     renderResult(result: any, opts: any, theme: any, ctx: any) {
       const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
+      text.customBgFn = undefined;
       const expanded = opts?.expanded ?? ctx.expanded ?? false;
 
       if (ctx.isError) {
@@ -1820,7 +1824,10 @@ export function registerDiffTools(pi: any): void {
         const loc =
           editLine > 0 ? ` ${theme.fg("muted", `at line ${editLine}`)}` : "";
         text.setText(
-          `  ${themedSummary(totalAdded, totalRemoved, theme)}${loc}`,
+          headerWithBackground(
+            `  ${themedSummary(totalAdded, totalRemoved, theme)}${loc}`,
+            theme,
+          ),
         );
         return text;
       }
@@ -1833,7 +1840,10 @@ export function registerDiffTools(pi: any): void {
             ? ` ${theme.fg("muted", `(${diffLineCount} diff lines)`)}`
             : "";
         text.setText(
-          `  ${theme.fg("muted", `${editCount} edits`)} ${themedSummary(totalAdded, totalRemoved, theme)}${dlInfo}`,
+          headerWithBackground(
+            `  ${theme.fg("muted", `${editCount} edits`)} ${themedSummary(totalAdded, totalRemoved, theme)}${dlInfo}`,
+            theme,
+          ),
         );
         return text;
       }
