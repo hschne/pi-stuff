@@ -67,6 +67,7 @@ type SandboxOverride = "disable" | "enable";
 interface SandboxState {
   override?: SandboxOverride;
   grants?: string[];
+  pendingNotice?: string | null;
 }
 
 type RuntimeState =
@@ -171,11 +172,26 @@ function restoreSessionState(ctx: ExtensionContext): void {
       sessionState.override = state.override;
     }
     if (isDirectoryList(state?.grants)) sessionState.grants = state.grants;
+    if (
+      state?.pendingNotice === null ||
+      typeof state?.pendingNotice === "string"
+    ) {
+      sessionState.pendingNotice = state.pendingNotice;
+    }
   }
 }
 
 function persistSessionState(pi: ExtensionAPI): void {
   pi.appendEntry<SandboxState>(STATE_ENTRY_TYPE, sessionState);
+}
+
+function showPendingNotice(pi: ExtensionAPI, ctx: ExtensionContext): void {
+  if (!sessionState.pendingNotice) return;
+
+  const notice = sessionState.pendingNotice;
+  sessionState.pendingNotice = null;
+  persistSessionState(pi);
+  ctx.ui.notify(notice, "warning");
 }
 
 function showInfo(ctx: ExtensionCommandContext): void {
@@ -284,12 +300,14 @@ export default function sandboxExtension(pi: ExtensionAPI) {
     sessionCwd = ctx.cwd;
     restoreSessionState(ctx);
     activate(ctx);
+    showPendingNotice(pi, ctx);
   });
 
   pi.on("session_tree", (_event, ctx) => {
     sessionCwd = ctx.cwd;
     restoreSessionState(ctx);
     activate(ctx);
+    showPendingNotice(pi, ctx);
   });
 
   pi.on("session_shutdown", () => {
@@ -398,8 +416,8 @@ export default function sandboxExtension(pi: ExtensionAPI) {
             return;
           }
 
+          sessionState.pendingNotice = "Sandbox grant added.";
           persistSessionState(pi);
-          ctx.ui.notify("Sandbox grant added. Reloading…", "warning");
           await ctx.reload();
           return;
         }
@@ -409,8 +427,8 @@ export default function sandboxExtension(pi: ExtensionAPI) {
             return;
           }
           sessionState.grants = [];
+          sessionState.pendingNotice = "Sandbox grants reset.";
           persistSessionState(pi);
-          ctx.ui.notify("Sandbox grants reset. Reloading…", "warning");
           await ctx.reload();
           return;
         case "disable":
@@ -419,13 +437,10 @@ export default function sandboxExtension(pi: ExtensionAPI) {
             return;
           }
           sessionState.override = "disable";
+          sessionState.pendingNotice = "Sandbox disabled for this session.";
           persistSessionState(pi);
           runtime = { status: "disabled" };
           ctx.ui.setStatus(STATUS_KEY, undefined);
-          ctx.ui.notify(
-            "Sandbox disabled for this session. Reloading…",
-            "warning",
-          );
           await ctx.reload();
           return;
         case "enable":
@@ -434,8 +449,8 @@ export default function sandboxExtension(pi: ExtensionAPI) {
             return;
           }
           sessionState.override = "enable";
+          sessionState.pendingNotice = "Sandbox enabled for this session.";
           persistSessionState(pi);
-          ctx.ui.notify("Sandbox enabling. Reloading…", "warning");
           await ctx.reload();
           return;
         default:
