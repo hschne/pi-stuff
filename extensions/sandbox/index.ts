@@ -57,6 +57,7 @@ import {
   SandboxPolicy,
   type SandboxJson,
 } from "./policy.js";
+import { renderBashCall, renderBashResult } from "../shared/bash-renderer.js";
 
 const STATUS_KEY = "sandbox";
 const STATUS_ICON = "";
@@ -345,6 +346,12 @@ export default function sandboxExtension(pi: ExtensionAPI) {
   pi.registerTool({
     ...registeredBash,
     label: "bash (sandboxed)",
+    renderCall(args, theme) {
+      return renderBashCall(args, theme);
+    },
+    renderResult(result, { expanded }, theme) {
+      return renderBashResult(result, expanded, theme);
+    },
     async execute(id, params, signal, onUpdate, ctx) {
       const cwd = typeof ctx.cwd === "string" ? ctx.cwd : sessionCwd;
       if (runtime.status === "blocked") {
