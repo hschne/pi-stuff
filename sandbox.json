@@ -3,6 +3,7 @@
     "~/.local/share/qmd",
     "~/.cache/qmd",
     "~/.local/state/mise",
+    "~/.local/share/mise",
     "~/.local/state/hk",
     "~/.cache/mise",
     "~/.cache/gh"
@@ -24,6 +25,9 @@
   ],
   "scrubEnv": [],
   "alias": {
-    "gh": ["~/.cache/gh", "~/.config/gh"]
+    "gh": [
+      "~/.cache/gh",
+      "~/.config/gh"
+    ]
   }
 }
