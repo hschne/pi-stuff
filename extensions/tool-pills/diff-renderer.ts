@@ -533,8 +533,7 @@ function isLowContrastShikiFg(params: string): boolean {
 
 function normalizeShikiContrast(ansi: string): string {
   return ansi.replace(ANSI_PARAM_CAPTURE_RE, (seq, params: string) => {
-    // The tool frame owns its background. Keep Shiki limited to foreground
-    // colors so its theme cannot paint a second, misaligned rectangle.
+    // Keep previews backgroundless and reserve diff backgrounds for changes.
     if (params === "49" || params.startsWith("48;")) return "";
     return isLowContrastShikiFg(params) ? FG_SAFE_MUTED : seq;
   });
@@ -1307,7 +1306,7 @@ export function registerDiffTools(pi: any): void {
 
   let createWriteFn: any,
     createEditFn: any,
-    TextComponent: any,
+    ToolTextComponent: any,
     pillFn: any,
     keyHintFn: any;
   try {
@@ -1315,12 +1314,13 @@ export function registerDiffTools(pi: any): void {
     createWriteFn = sdk.createWriteTool;
     createEditFn = sdk.createEditTool;
     keyHintFn = sdk.keyHint;
-    TextComponent = require("@earendil-works/pi-tui").Text;
-    pillFn = require("./pill.js").pill;
+    const pillModule = require("./pill.js");
+    pillFn = pillModule.pill;
+    ToolTextComponent = pillModule.ToolText;
   } catch {
     return;
   }
-  if (!createWriteFn || !createEditFn || !TextComponent) return;
+  if (!createWriteFn || !createEditFn || !ToolTextComponent) return;
 
   const cwd = process.cwd();
   const home = process.env.HOME ?? "";
@@ -1353,31 +1353,20 @@ export function registerDiffTools(pi: any): void {
     const p = pillFn
       ? pillFn(label, theme)
       : theme.fg("toolTitle", theme.bold(label.padEnd(5)));
-    return ` ${p} ${theme.fg("accent", sp(fp))}`;
+    return `${p} ${theme.fg("accent", sp(fp))}`;
   }
 
-  /** Fill the complete tool frame, including headers and blank padding. */
-  function setToolBackground(text: any, theme: any): void {
-    try {
-      const background = theme.getBgAnsi?.("toolSuccessBg");
-      text.customBgFn = background
-        ? (line: string) => injectBg(line, [], background, background)
-        : undefined;
-    } catch {
-      text.customBgFn = undefined;
-    }
-  }
-
-  /** Give only the header row the tool background. */
-  function headerWithBackground(value: string, theme: any): string {
-    try {
-      const background = theme.getBgAnsi?.("toolSuccessBg");
-      if (!background) return value;
-      const padding = " ".repeat(Math.max(0, termW() - strip(value).length));
-      return injectBg(`${value}${padding}`, [], background, background);
-    } catch {
-      return value;
-    }
+  function framedText(
+    ctx: any,
+    theme: any,
+    frame: { top?: boolean; bottom?: boolean; error?: boolean },
+  ): any {
+    const text =
+      ctx.lastComponent instanceof ToolTextComponent
+        ? ctx.lastComponent
+        : new ToolTextComponent("", theme, frame);
+    text.setFrame(theme, frame);
+    return text;
   }
 
   function themedSummary(added: number, removed: number, theme: any): string {
@@ -1396,6 +1385,7 @@ export function registerDiffTools(pi: any): void {
   pi.registerTool({
     ...origWrite,
     parameters: { ...origWrite.parameters },
+    renderShell: "self",
 
     async execute(tid: string, params: any, sig: any, upd: any, ctx: any) {
       const fp = params.path ?? params.file_path ?? "";
@@ -1445,8 +1435,10 @@ export function registerDiffTools(pi: any): void {
       // Use state from execute if available, otherwise check filesystem
       const isNew = ctx.state?._isNewFile ?? (!fp || !existsSync(fp));
       const label = isNew ? "create" : "write";
-      const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-      setToolBackground(text, theme);
+      const text = framedText(ctx, theme, {
+        top: true,
+        error: ctx.isError,
+      });
       const hdr = header(label, fp, theme);
 
       // Streaming: show line count progress
@@ -1499,8 +1491,10 @@ export function registerDiffTools(pi: any): void {
     },
 
     renderResult(result: any, opts: any, theme: any, ctx: any) {
-      const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-      setToolBackground(text, theme);
+      const text = framedText(ctx, theme, {
+        bottom: true,
+        error: ctx.isError,
+      });
       const expanded = opts?.expanded ?? ctx.expanded ?? false;
 
       if (ctx.isError) {
@@ -1666,6 +1660,7 @@ export function registerDiffTools(pi: any): void {
   pi.registerTool({
     ...origEdit,
     parameters: { ...origEdit.parameters },
+    renderShell: "self",
 
     async execute(tid: string, params: any, sig: any, upd: any, ctx: any) {
       const fp = params.path ?? params.file_path ?? "";
@@ -1724,9 +1719,11 @@ export function registerDiffTools(pi: any): void {
     renderCall(args: any, theme: any, ctx: any) {
       const fp = args?.path ?? args?.file_path ?? "";
       const operations = getEditOperations(args);
-      const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-      text.customBgFn = undefined;
-      const hdr = headerWithBackground(header("edit", fp, theme), theme);
+      const text = framedText(ctx, theme, {
+        top: true,
+        error: ctx.isError,
+      });
+      const hdr = header("edit", fp, theme);
 
       if (!(ctx.argsComplete && operations.length > 0)) {
         text.setText(hdr);
@@ -1747,11 +1744,7 @@ export function registerDiffTools(pi: any): void {
           renderSplit(diff, lg, maxLines, dc)
             .then((rendered) => {
               if (ctx.state._pk !== pk) return;
-              const indented = rendered
-                .split("\n")
-                .map((line) => ` ${line}`)
-                .join("\n");
-              let out = `${hdr}\n\n${indented}`;
+              let out = `${hdr}\n\n${rendered}`;
               if (!expanded && diff.lines.length > COLLAPSED_DIFF_LINES) {
                 out += `\n${expandHint(theme)}`;
               }
@@ -1805,8 +1798,10 @@ export function registerDiffTools(pi: any): void {
     },
 
     renderResult(result: any, opts: any, theme: any, ctx: any) {
-      const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-      text.customBgFn = undefined;
+      const text = framedText(ctx, theme, {
+        bottom: true,
+        error: ctx.isError,
+      });
       const expanded = opts?.expanded ?? ctx.expanded ?? false;
 
       if (ctx.isError) {
@@ -1824,10 +1819,7 @@ export function registerDiffTools(pi: any): void {
         const loc =
           editLine > 0 ? ` ${theme.fg("muted", `at line ${editLine}`)}` : "";
         text.setText(
-          headerWithBackground(
-            `  ${themedSummary(totalAdded, totalRemoved, theme)}${loc}`,
-            theme,
-          ),
+          `  ${themedSummary(totalAdded, totalRemoved, theme)}${loc}`,
         );
         return text;
       }
@@ -1840,10 +1832,7 @@ export function registerDiffTools(pi: any): void {
             ? ` ${theme.fg("muted", `(${diffLineCount} diff lines)`)}`
             : "";
         text.setText(
-          headerWithBackground(
-            `  ${theme.fg("muted", `${editCount} edits`)} ${themedSummary(totalAdded, totalRemoved, theme)}${dlInfo}`,
-            theme,
-          ),
+          `  ${theme.fg("muted", `${editCount} edits`)} ${themedSummary(totalAdded, totalRemoved, theme)}${dlInfo}`,
         );
         return text;
       }

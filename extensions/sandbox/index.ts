@@ -346,11 +346,12 @@ export default function sandboxExtension(pi: ExtensionAPI) {
   pi.registerTool({
     ...registeredBash,
     label: "bash (sandboxed)",
-    renderCall(args, theme) {
-      return renderBashCall(args, theme);
+    renderShell: "self",
+    renderCall(args, theme, ctx) {
+      return renderBashCall(args, theme, ctx.isError);
     },
-    renderResult(result, { expanded }, theme) {
-      return renderBashResult(result, expanded, theme);
+    renderResult(result, { expanded }, theme, ctx) {
+      return renderBashResult(result, expanded, theme, ctx.isError);
     },
     async execute(id, params, signal, onUpdate, ctx) {
       const cwd = typeof ctx.cwd === "string" ? ctx.cwd : sessionCwd;

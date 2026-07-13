@@ -15,8 +15,7 @@ import {
   createReadToolDefinition,
   keyHint,
 } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
-import { pill } from "./pill.js";
+import { pill, ToolText } from "./pill.js";
 import { registerDiffTools } from "./diff-renderer.js";
 
 /** Max lines shown in collapsed (non-expanded) result view */
@@ -36,14 +35,14 @@ function renderTextResult(
   expanded: boolean,
   theme: Theme,
   mode: "head" | "tail" = "head",
-): Text {
-  if (!text || !text.trim()) return new Text("", 0, 0);
+): string {
+  if (!text || !text.trim()) return "";
 
   const lines = text.split("\n");
 
   if (expanded || lines.length <= COLLAPSED_MAX_LINES) {
     const output = lines.map((l) => theme.fg("toolOutput", l)).join("\n");
-    return new Text(`\n${output}`, 0, 0);
+    return `\n${output}`;
   }
 
   const hidden = lines.length - COLLAPSED_MAX_LINES;
@@ -55,12 +54,12 @@ function renderTextResult(
   if (mode === "tail") {
     const visible = lines.slice(-COLLAPSED_MAX_LINES);
     const output = visible.map((l) => theme.fg("toolOutput", l)).join("\n");
-    return new Text(`\n${hint}\n${output}`, 0, 0);
+    return `\n${hint}\n${output}`;
   }
 
   const visible = lines.slice(0, COLLAPSED_MAX_LINES);
   const output = visible.map((l) => theme.fg("toolOutput", l)).join("\n");
-  return new Text(`\n${output}\n${hint}`, 0, 0);
+  return `\n${output}\n${hint}`;
 }
 
 /** Helper to register a basic tool (ls, read) with pill + collapsed output. */
@@ -74,16 +73,25 @@ function wrapBasicTool(
   pi.registerTool({
     ...orig,
     parameters: { ...orig.parameters },
-    renderCall(args: any, theme: Theme, _ctx: any) {
-      return new Text(pill(name, theme) + " " + mkCallText(args, theme), 0, 0);
+    renderShell: "self",
+    renderCall(args: any, theme: Theme, ctx: any) {
+      return new ToolText(
+        pill(name, theme) + " " + mkCallText(args, theme),
+        theme,
+        { top: true, error: ctx.isError },
+      );
     },
     renderResult(
       result: any,
       { expanded }: { expanded: boolean },
       theme: Theme,
-      _ctx: any,
+      ctx: any,
     ) {
-      return renderTextResult(getText(result), expanded, theme, mode);
+      return new ToolText(
+        renderTextResult(getText(result), expanded, theme, mode),
+        theme,
+        { bottom: true, error: ctx.isError },
+      );
     },
   });
 }

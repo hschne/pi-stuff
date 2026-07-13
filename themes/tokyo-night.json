@@ -36,9 +36,9 @@
     "customMessageBg": "#1f2335",
     "customMessageText": "fg",
     "customMessageLabel": "magenta",
-    "toolPendingBg": "bg_dark",
-    "toolSuccessBg": "#2e3c64",
-    "toolErrorBg": "#3d2b3d",
+    "toolPendingBg": "bg",
+    "toolSuccessBg": "bg",
+    "toolErrorBg": "bg",
     "toolTitle": "blue",
     "toolOutput": "fg_dark",
     "mdHeading": "magenta",
@@ -69,7 +69,7 @@
     "thinkingMedium": "cyan",
     "thinkingHigh": "magenta",
     "thinkingXhigh": "red",
-    "bashMode": "yellow"
+    "bashMode": "purple"
   },
   "export": {
     "pageBg": "#1a1b26",

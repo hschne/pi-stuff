@@ -9,10 +9,9 @@
     "npm:pi-mcp-adapter",
     "npm:pi-prompt-template-model",
     "npm:pi-subagents",
-    "npm:pi-web-access",
-    "npm:pi-intercom"
+    "npm:pi-web-access"
   ],
-  "defaultThinkingLevel": "minimal",
+  "defaultThinkingLevel": "low",
   "hideThinkingBlock": false,
   "enabledModels": [
     "anthropic/claude-opus-4-8",
