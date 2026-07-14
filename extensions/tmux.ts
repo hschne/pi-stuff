@@ -2,7 +2,7 @@ import { execFileSync, execSync } from "node:child_process";
 import { basename } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-const MARKER = "π";
+const MARKER = "󴄾";
 const MAX_SESSION_TITLE_LEN = 30;
 
 const is_tmux = (): boolean => {
