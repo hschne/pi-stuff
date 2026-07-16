@@ -6,7 +6,8 @@
     "~/.local/share/mise",
     "~/.local/state/hk",
     "~/.cache/mise",
-    "~/.cache/gh"
+    "~/.cache/gh",
+    "~/.npm"
   ],
   "denyRead": [
     "~/.ssh",
@@ -25,9 +26,6 @@
   ],
   "scrubEnv": [],
   "alias": {
-    "gh": [
-      "~/.cache/gh",
-      "~/.config/gh"
-    ]
+    "gh": ["~/.cache/gh", "~/.config/gh"]
   }
 }
