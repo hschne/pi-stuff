@@ -24,10 +24,10 @@ Apply best practices when writing or refactoring Svelte components.
 
 Read the reference that matches the area you are working on:
 
-| Topic      | Description                                                    | Reference                              |
-| ---------- | -------------------------------------------------------------- | -------------------------------------- |
-| ordering   | Script block ordering convention (imports → props → state → …) | [ordering](references/ordering.md)     |
-| reactivity | Props, state, derived, effects, untrack, and common pitfalls   | [reactivity](references/reactivity.md) |
-| markup     | Template a11y, class directives, and styling conventions       | [markup](references/markup.md)         |
-| patterns   | Context API, forwarding props, controlled inputs, snippets     | [patterns](references/patterns.md)     |
-| typescript | Typing props, state, derived, snippets, events, and context    | [typescript](references/typescript.md) |
+| Topic      | Description                                                                          | Reference                              |
+| ---------- | ------------------------------------------------------------------------------------ | -------------------------------------- |
+| ordering   | Component structure and script ordering (file sections; imports → props → state → …) | [ordering](references/ordering.md)     |
+| reactivity | Props, state, derived, effects, untrack, and common pitfalls                         | [reactivity](references/reactivity.md) |
+| markup     | Template a11y, class directives, and styling conventions                             | [markup](references/markup.md)         |
+| patterns   | Context API, forwarding props, controlled inputs, snippets                           | [patterns](references/patterns.md)     |
+| typescript | Typing props, state, derived, snippets, events, and context                          | [typescript](references/typescript.md) |

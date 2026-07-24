@@ -7,7 +7,7 @@
 #   axe-audit.sh http://localhost:4000/about
 #   axe-audit.sh http://localhost:4000 --disable color-contrast
 #
-# Requires: npx (Node.js)
+# Requires: npx (Node.js), Chromium, and ChromeDriver
 
 set -euo pipefail
 
@@ -23,22 +23,31 @@ fi
 url="$1"
 shift
 
+chrome="$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)"
+chromedriver="$(command -v chromedriver || true)"
+
+if [[ -z "$chrome" ]]; then
+  echo "Error: Chromium or Chrome is required." >&2
+  exit 2
+fi
+
+if [[ -z "$chromedriver" ]]; then
+  echo "Error: ChromeDriver is required; install pkgs.chromedriver through NixOS." >&2
+  exit 2
+fi
+
 echo "Running axe-core audit on: $url"
 echo "---"
 
 # Run axe-core CLI. --exit passes through the exit code (non-zero if violations found).
 # Additional flags are forwarded.
-if ! npx --yes @axe-core/cli@latest "$url" --exit "$@" 2>&1; then
-  exit_code=$?
-  # ChromeDriver mismatch is a common issue — suggest alternatives
-  if [[ $exit_code -eq 2 ]]; then
-    echo ""
-    echo "Hint: If ChromeDriver version is mismatched, try:"
-    echo "  npx browser-driver-manager install chrome"
-    echo "Or use Lighthouse via Chrome DevTools MCP / Playwright MCP + axe-core instead."
-  fi
-else
+if npx --yes @axe-core/cli@4.12.1 "$url" --exit \
+  --chrome-path "$chrome" \
+  --chromedriver-path "$chromedriver" \
+  "$@" 2>&1; then
   exit_code=0
+else
+  exit_code=$?
 fi
 
 echo ""
@@ -50,4 +59,4 @@ else
   echo "   Fix violations and re-run to verify."
 fi
 
-exit $exit_code
+exit "$exit_code"

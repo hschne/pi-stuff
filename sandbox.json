@@ -1,12 +1,10 @@
 {
   "write": [
     "~/.local/share/qmd",
-    "~/.cache/qmd",
+    "~/.cache",
     "~/.local/state/mise",
     "~/.local/share/mise",
     "~/.local/state/hk",
-    "~/.cache/mise",
-    "~/.cache/gh",
     "~/.npm"
   ],
   "denyRead": [
@@ -24,8 +22,5 @@
     "~/.docker",
     "~/.kube"
   ],
-  "scrubEnv": [],
-  "alias": {
-    "gh": ["~/.cache/gh", "~/.config/gh"]
-  }
+  "scrubEnv": []
 }

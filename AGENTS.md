@@ -50,3 +50,5 @@ If the user's instructions conflict with any rule in this document, ask for expl
 ## System
 
 You are running on NixOS. The configuration for this system is managed in `~/Source/nixfiles`
+
+If a sandbox denies a write, stop immediately and ask the user to intervene. Do not attempt the write through another tool or command.
