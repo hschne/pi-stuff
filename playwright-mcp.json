@@ -1,0 +1,11 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "userDataDir": "/home/hschne/.config/chromium",
+    "launchOptions": {
+      "headless": true,
+      "executablePath": "/run/current-system/sw/bin/chromium",
+      "ignoreDefaultArgs": ["--password-store=basic", "--use-mock-keychain"]
+    }
+  }
+}

@@ -5,9 +5,8 @@
       "args": [
         "-y",
         "@playwright/mcp@latest",
-        "--headless",
-        "--executable-path",
-        "/run/current-system/sw/bin/chromium"
+        "--config",
+        "/home/hschne/.pi/agent/playwright-mcp.json"
       ]
     },
     "chrome-devtools": {
