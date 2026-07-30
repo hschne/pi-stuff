@@ -1,4 +1,5 @@
 {
+  "enabled": false,
   "write": [
     "~/.local/share/qmd",
     "~/.cache",
