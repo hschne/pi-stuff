@@ -1,9 +1,9 @@
 /**
- * Sandbox extension (on by default, pure bubblewrap).
+ * Sandbox extension (pure bubblewrap).
  *
- * Active in every session unless explicitly disabled. Disable with
- * `/sandbox disable` (this session) or `"enabled": false` in a `sandbox.json`.
- * An explicit `/sandbox enable` overrides `"enabled": false`.
+ * Controlled by `sandbox.json`. Disable with `/sandbox disable` for the
+ * current session. An explicit `--sandbox` launch flag or `/sandbox enable`
+ * command overrides `"enabled": false`.
  *
  * Threat model: the agent and its subprocesses are not trusted. Enforcement has
  * two adapters behind one policy module:
@@ -229,7 +229,7 @@ function setStatus(ctx: ExtensionContext): void {
   }
 }
 
-function activate(ctx: ExtensionContext): void {
+function activate(ctx: ExtensionContext, launchEnabled: boolean): void {
   runtime = { status: "disabled" };
   if (sessionState.override === "disable") {
     setStatus(ctx);
@@ -256,7 +256,11 @@ function activate(ctx: ExtensionContext): void {
     return;
   }
 
-  if (config.enabled === false && sessionState.override !== "enable") {
+  if (
+    config.enabled === false &&
+    sessionState.override !== "enable" &&
+    !launchEnabled
+  ) {
     ctx.ui.notify(
       "Sandbox disabled via config (/sandbox enable to override)",
       "info",
@@ -297,17 +301,23 @@ export default function sandboxExtension(pi: ExtensionAPI) {
   let sessionCwd = process.cwd();
   const registeredBash = createBashToolDefinition(sessionCwd);
 
+  pi.registerFlag("sandbox", {
+    description: "Enable the bubblewrap sandbox for this launch",
+    type: "boolean",
+    default: false,
+  });
+
   pi.on("session_start", (_event, ctx) => {
     sessionCwd = ctx.cwd;
     restoreSessionState(ctx);
-    activate(ctx);
+    activate(ctx, pi.getFlag("sandbox") === true);
     showPendingNotice(pi, ctx);
   });
 
   pi.on("session_tree", (_event, ctx) => {
     sessionCwd = ctx.cwd;
     restoreSessionState(ctx);
-    activate(ctx);
+    activate(ctx, pi.getFlag("sandbox") === true);
     showPendingNotice(pi, ctx);
   });
 

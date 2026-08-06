@@ -1,7 +1,7 @@
 {
   "name": "pi-extension-sandbox-hans",
   "version": "1.0.0",
-  "description": "Bubblewrap sandbox on by default: read-only root, writable cwd+/tmp, secret env scrub and skeleton-key path masking",
+  "description": "Opt-in bubblewrap sandbox with a read-only root, writable cwd+/tmp, secret env scrubbing, and sensitive-path masking",
   "type": "module",
   "pi": {
     "extensions": [
