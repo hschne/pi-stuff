@@ -1,27 +1,27 @@
 ---
 name: socials
-description: Frame screenshots as polished social-media images with a restrained gradient background, rounded panel, and soft shadow. Use when the user provides an image to prepare for social media, asks to turn a screenshot into a social card, or asks to capture a page or terminal and frame it for sharing.
+description: Create polished social-media images from screenshots or custom HTML compositions. Use when framing a screenshot for sharing, capturing a page or terminal for social media, or designing a branded Open Graph or repository social-preview image with a project name, tagline, URL, and embedded product image.
 ---
 
-# Social Screenshot
+# Social Images
 
-Turn a supplied or newly captured screenshot into a clean 16:9 social card while keeping the screenshot itself as the focus.
+Create restrained screenshot cards or custom branded social previews while keeping the product legible and the project identity clear.
 
 ## Core Rules
 
-- Use `scripts/frame-screenshot.sh` for deterministic framing.
-- Preserve the screenshot's aspect ratio and legibility.
-- Default to the restrained Tokyo Night blue-to-slate gradient. Treat the background as framing, not decoration.
-- Keep the rounded panel and soft shadow subtle enough that they do not compete with the content.
-- Return the absolute output path and preview the result before handoff.
+- Choose the output branch first: frame an existing screenshot, or compose a branded Open Graph image in HTML.
+- Inspect reference images, existing OG HTML, design tokens, and configured fonts before choosing a visual direction. Prior art is the house style.
+- Keep branded preview copy sparse. A project name, one-line description, and URL are usually sufficient.
+- Show a review render before capturing the final branded image. Composition feedback is cheaper to apply in HTML than after handoff.
+- Read the final image and verify dimensions, legibility, cropping, and balance.
 
-## Workflow
+## Frame a Screenshot
 
 1. Resolve the source image:
-   - For a supplied file, read it first and confirm it contains the intended content.
-   - For a page or application, load the `browser` skill, capture the requested state, and use that screenshot.
-   - For a terminal, ask for a screenshot unless the active environment provides a capture mechanism.
-2. Frame it:
+   - Read a supplied image and confirm it contains the intended content.
+   - For a page or application, load the `browser` skill and capture the requested state.
+   - For a terminal, ask for a screenshot unless the environment provides a deterministic capture mechanism.
+2. Frame it with the bundled script:
 
    ```bash
    <skill-dir>/scripts/frame-screenshot.sh INPUT.png -o OUTPUT.png
@@ -32,10 +32,48 @@ Turn a supplied or newly captured screenshot into a clean 16:9 social card while
    - text remains legible;
    - margins are balanced;
    - corners and shadow render cleanly;
-   - the gradient is understated.
-4. Adjust `--from` and `--to` only when the user requests another palette. Run the script again and preview the new output.
-5. Report the absolute path to the final PNG.
+   - the background supports rather than competes with the screenshot.
 
-## Output
+The default output is a 2400×1350 PNG with a restrained Tokyo Night blue-to-slate gradient. Adjust `--from` and `--to` only when the project calls for another palette.
 
-The default output is a 2400×1350 PNG suitable for common 16:9 social previews. When `-o` is omitted, the script writes `<input-name>-social.png` next to the input.
+## Compose a Branded Open Graph Image
+
+Use HTML when the image needs project identity, typography, and art direction beyond simple framing. HTML keeps layout, type, and screenshot bleed precise and easy to revise.
+
+1. Gather the project name, one-line description, canonical URL, and product screenshot or video still.
+2. Inspect any reference OG image and its source HTML. Match its structural conventions while adapting the composition to the current project.
+3. Write a retained source page such as `doc/og/index.html`:
+   - fix `html` and `body` to the target dimensions, commonly `1280×640` for GitHub;
+   - set `overflow: hidden`;
+   - use the project's configured font with durable fallbacks;
+   - embed the screenshot through a relative path;
+   - let the screenshot bleed or overlap when that gives the product enough visual weight;
+   - keep the project name dominant and readable at thumbnail size.
+4. Serve the page over HTTP so relative assets and fonts render consistently:
+
+   ```bash
+   (cd doc && python3 -m http.server 8917)
+   ```
+
+5. Use the `browser` skill to resize the viewport to the exact target dimensions and capture a temporary review PNG with CSS-pixel scaling.
+6. Read the review PNG and present it for approval. Revise the HTML until approved.
+7. Capture the approved viewport to the final asset path, for example `doc/assets/og.png`.
+8. Stop the HTTP server and keep the HTML source beside the generated asset so future changes remain reproducible.
+
+## Verification
+
+Run an image inspector and confirm the exact output dimensions:
+
+```bash
+identify OUTPUT.png
+```
+
+Then read the image and check that:
+
+- the project name survives thumbnail display;
+- the copy has no accidental wrapping;
+- the screenshot remains recognizable without dominating the identity;
+- no edge clipping looks accidental;
+- the final file matches the approved review render.
+
+Return the absolute output path and note the retained HTML source when applicable.

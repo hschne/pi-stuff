@@ -53,13 +53,13 @@ Read the existing `grill-me` skill at `~/.pi/agent/skills/grill-me/SKILL.md` and
 ### Phase 2: Design Brief
 
 Read the `design-brief` skill at `~/.pi/agent/skills/design-brief/SKILL.md` and follow its instructions.
-**Produces**: `.design/<feature-slug>/DESIGN_BRIEF.md`.
+**Produces**: `.agents/.design/<feature-slug>/DESIGN_BRIEF.md`.
 **Transition**: "The brief is saved. Next is design architecture, where we'll define the page structure and navigation. Skip this if you're building a single component. Continue?"
 
 ### Phase 3: Design Architecture
 
 Read the `design-architecture` skill at `~/.pi/agent/skills/design-architecture/SKILL.md` and follow its instructions.
-**Produces**: `.design/<feature-slug>/DESIGN_ARCHITECTURE.md`.
+**Produces**: `.agents/.design/<feature-slug>/DESIGN_ARCHITECTURE.md`.
 **Transition**: "IA is defined. Next we'll generate design tokens (colors, spacing, typography) based on the philosophy from the brief. Continue?"
 
 ### Phase 4: Design Tokens
@@ -71,7 +71,7 @@ Read the `design-tokens` skill at `~/.pi/agent/skills/design-tokens/SKILL.md` an
 ### Phase 5: Design Tasks
 
 Read the `design-tasks` skill at `~/.pi/agent/skills/design-tasks/SKILL.md` and follow its instructions.
-**Produces**: `.design/<feature-slug>/TASKS.md`.
+**Produces**: `.agents/.design/<feature-slug>/TASKS.md`.
 **Transition**: "Tasks are ready. Now we build. I'll start with the first task on the list. Continue?"
 
 ### Phase 6: Design Principles
@@ -94,15 +94,15 @@ The review requires built code to examine. If no components or pages have been b
 
 When triggered, read the `design-review` skill at `~/.pi/agent/skills/design-review/SKILL.md` and follow its instructions. The review will capture screenshots of the running application using Playwright MCP (preferred), Chrome DevTools MCP (fallback), or by asking the user to provide them manually if no browser tool is available.
 
-**Produces**: `.design/<feature-slug>/DESIGN_REVIEW.md` + screenshots saved in `.design/<feature-slug>/screenshots/`.
-**Transition**: "Review is done. Screenshots are saved in `.design/<feature-slug>/screenshots/`. If there are must-fix items, I can address them now."
+**Produces**: `.agents/.design/<feature-slug>/DESIGN_REVIEW.md` + screenshots saved in `.agents/.design/<feature-slug>/screenshots/`.
+**Transition**: "Review is done. Screenshots are saved in `.agents/.design/<feature-slug>/screenshots/`. If there are must-fix items, I can address them now."
 
 ## Project Files Structure
 
-All design flow artifacts are saved under `.design/<feature-slug>/` where `<feature-slug>` is a short, lowercase, hyphenated name derived from the feature being designed. This ensures multiple features can be designed independently without overwriting each other.
+All design flow artifacts are saved under `.agents/.design/<feature-slug>/` where `<feature-slug>` is a short, lowercase, hyphenated name derived from the feature being designed. This ensures multiple features can be designed independently without overwriting each other.
 
 ```
-.design/
+.agents/.design/
 └── <feature-slug>/
     ├── DESIGN_BRIEF.md              ← Phase 2: Project intent, goals, aesthetic direction
     ├── DESIGN_ARCHITECTURE.md  ← Phase 3: Navigation, page structure, user flows
@@ -121,4 +121,4 @@ The `screenshots/` subfolder is created during the design review phase. All visu
 
 ## If the Designer Returns Mid-Flow
 
-Check the `.design/` folder for existing feature subfolders. If files from earlier phases exist (DESIGN_BRIEF.md, DESIGN_ARCHITECTURE.md, TASKS.md) inside a feature folder, read them to understand where the designer left off. Ask which feature to resume if multiple folders exist. Resume from the next incomplete phase.
+Check the `.agents/.design/` folder for existing feature subfolders. If files from earlier phases exist (DESIGN_BRIEF.md, DESIGN_ARCHITECTURE.md, TASKS.md) inside a feature folder, read them to understand where the designer left off. Ask which feature to resume if multiple folders exist. Resume from the next incomplete phase.

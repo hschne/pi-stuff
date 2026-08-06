@@ -23,6 +23,7 @@ Technical guidance for writing robust plain CSS and choosing modern native CSS f
 - Prefer `:has()` for parent/sibling/state styling, but keep selectors narrow and scoped.
 - Prefer cascade layers and low-specificity selectors over specificity escalation, selector soup, or `!important`.
 - Prefer custom properties for themeable values and component APIs.
+- For optical alignment, apply a small named `em`-based `translate` correction and verify it visually; CSS does not automatically align arbitrary glyphs by perceived visual mass.
 - Prefer `aspect-ratio` over padding hacks.
 - Prefer `color-mix()`, `oklch()`, and relative color syntax for derived colors when browser support permits.
 - Use `@supports` for progressive enhancement around newer or partially supported features.

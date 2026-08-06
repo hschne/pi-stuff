@@ -19,7 +19,7 @@ This skill runs a structured design review of what has been built, measured agai
 
 ## Process
 
-1. **Read the brief.** Look for the active feature's brief at `.design/<feature-slug>/DESIGN_BRIEF.md`. If multiple feature folders exist under `.design/`, ask the user which feature to review. If no `.design/` folder exists, fall back to `DESIGN_BRIEF.md` in the project root. If neither exists, ask the user what the intended design direction was.
+1. **Read the brief.** Look for the active feature's brief at `.agents/.design/<feature-slug>/DESIGN_BRIEF.md`. If multiple feature folders exist under `.agents/.design/`, ask the user which feature to review. If no `.agents/.design/` folder exists, fall back to `DESIGN_BRIEF.md` in the project root. If neither exists, ask the user what the intended design direction was.
 
 2. **Explore the built code.** Examine every component, page, and style file that was created or modified. Scan specifically for:
    - All new or modified components and their relationship to pre-existing components
@@ -49,18 +49,18 @@ This skill runs a structured design review of what has been built, measured agai
 
    ### Screenshot Save Location
 
-   All screenshots MUST be saved to a `screenshots/` subfolder inside the feature's `.design/` directory — the same folder where `DESIGN_BRIEF.md` and other design flow files live.
+   All screenshots MUST be saved to a `screenshots/` subfolder inside the feature's `.agents/.design/` directory — the same folder where `DESIGN_BRIEF.md` and other design flow files live.
 
-   Path pattern: `.design/<feature-slug>/screenshots/`
+   Path pattern: `.agents/.design/<feature-slug>/screenshots/`
 
-   If the brief lives at `.design/onboarding-flow/DESIGN_BRIEF.md`, screenshots go to `.design/onboarding-flow/screenshots/`. Create the folder if it does not exist.
+   If the brief lives at `.agents/.design/onboarding-flow/DESIGN_BRIEF.md`, screenshots go to `.agents/.design/onboarding-flow/screenshots/`. Create the folder if it does not exist.
 
-   If no `.design/` folder exists (legacy project or standalone review), fall back to a `screenshots/` folder in the project root.
+   If no `.agents/.design/` folder exists (legacy project or standalone review), fall back to a `screenshots/` folder in the project root.
 
    Use descriptive filenames that encode what was captured:
 
    ```
-   .design/
+   .agents/.design/
    └── onboarding-flow/
        ├── DESIGN_BRIEF.md
        ├── DESIGN_REVIEW.md
@@ -91,11 +91,11 @@ This skill runs a structured design review of what has been built, measured agai
    ```
    1. browser_navigate → { url: "http://localhost:3000" }
    2. browser_resize   → { width: 1280, height: 800 }
-   3. browser_take_screenshot → { type: "png", filename: ".design/onboarding-flow/screenshots/review-homepage-desktop-1280.png", fullPage: true }
+   3. browser_take_screenshot → { type: "png", filename: ".agents/.design/onboarding-flow/screenshots/review-homepage-desktop-1280.png", fullPage: true }
    4. browser_resize   → { width: 768, height: 1024 }
-   5. browser_take_screenshot → { type: "png", filename: ".design/onboarding-flow/screenshots/review-homepage-tablet-768.png", fullPage: true }
+   5. browser_take_screenshot → { type: "png", filename: ".agents/.design/onboarding-flow/screenshots/review-homepage-tablet-768.png", fullPage: true }
    6. browser_resize   → { width: 375, height: 812 }
-   7. browser_take_screenshot → { type: "png", filename: ".design/onboarding-flow/screenshots/review-homepage-mobile-375.png", fullPage: true }
+   7. browser_take_screenshot → { type: "png", filename: ".agents/.design/onboarding-flow/screenshots/review-homepage-mobile-375.png", fullPage: true }
    ```
 
    **c. Capture interactive states (when relevant).**
@@ -129,7 +129,7 @@ This skill runs a structured design review of what has been built, measured agai
    - **Should fix**: Inconsistencies, missing states, responsive issues.
    - **Could improve**: Polish, animation refinement, typography fine-tuning.
 
-6. Save the review as `DESIGN_REVIEW.md` inside the feature's `.design/<feature-slug>/` folder (next to `DESIGN_BRIEF.md`). If no `.design/` folder exists, save to the project root. Include a "Screenshots Captured" section listing all screenshots taken with their paths. Present the review directly as well if the user prefers.
+6. Save the review as `DESIGN_REVIEW.md` inside the feature's `.agents/.design/<feature-slug>/` folder (next to `DESIGN_BRIEF.md`). If no `.agents/.design/` folder exists, save to the project root. Include a "Screenshots Captured" section listing all screenshots taken with their paths. Present the review directly as well if the user prefers.
 
 ## Review Checklist
 
@@ -225,7 +225,7 @@ Date: [date]
 | `screenshots/review-[page]-tablet-768.png`   | Tablet (768×1024)  | [what it shows] |
 | `screenshots/review-[page]-mobile-375.png`   | Mobile (375×812)   | [what it shows] |
 
-> All screenshots are in `.design/<feature-slug>/screenshots/`.
+> All screenshots are in `.agents/.design/<feature-slug>/screenshots/`.
 
 ## Summary
 
