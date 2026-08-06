@@ -1,7 +1,7 @@
 {
   "browser": {
     "browserName": "chromium",
-    "userDataDir": "/home/hschne/.config/chromium",
+    "userDataDir": "/home/hschne/.cache/playwright-mcp/headless",
     "launchOptions": {
       "headless": true,
       "executablePath": "/run/current-system/sw/bin/chromium",

@@ -8,4 +8,4 @@ Run the design-flow skill for the user's request.
 
 User request/context: $@
 
-Follow the skill exactly: introduce the phases, ask which phases to skip, wait for confirmation between phases, and write the expected `.design/<feature-slug>/` artifacts as the workflow progresses.
+Follow the skill exactly: introduce the phases, ask which phases to skip, wait for confirmation between phases, and write the expected `.agents/.design/<feature-slug>/` artifacts as the workflow progresses.

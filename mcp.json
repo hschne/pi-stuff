@@ -9,6 +9,15 @@
         "/home/hschne/.pi/agent/playwright-mcp.json"
       ]
     },
+    "playwright-live": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--config",
+        "/home/hschne/.pi/agent/playwright-live-mcp.json"
+      ]
+    },
     "chrome-devtools": {
       "command": "npx",
       "args": [
@@ -20,6 +29,11 @@
         "--no-usageStatistics",
         "--no-performanceCrux"
       ]
+    },
+    "buffer": {
+      "url": "https://mcp.buffer.com/mcp",
+      "auth": "bearer",
+      "bearerToken": "!fnox get BUFFER_API_KEY"
     }
   }
 }
