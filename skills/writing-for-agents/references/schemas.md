@@ -1,6 +1,6 @@
 # JSON Schemas
 
-JSON structures used by the skill-creator eval workflow.
+JSON structures used by the skill evaluation workflow.
 
 ## evals.json
 

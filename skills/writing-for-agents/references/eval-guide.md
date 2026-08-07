@@ -40,29 +40,7 @@ Process some data.
 
 ### evals.json Format
 
-Save test cases to a workspace directory (sibling to the skill, e.g., `<skill-name>-workspace/evals/evals.json`):
-
-```json
-{
-  "skill_name": "my-skill",
-  "evals": [
-    {
-      "id": 1,
-      "name": "descriptive-name",
-      "prompt": "The realistic user prompt",
-      "expected_output": "Human-readable description of what success looks like",
-      "files": [],
-      "assertions": [
-        "The output file exists and is non-empty",
-        "The profit_margin column contains percentage values",
-        "Rows with zero costs are excluded"
-      ]
-    }
-  ]
-}
-```
-
-See [schemas.md](schemas.md) for the full schema.
+Save test cases beside the skill at `<skill-name>-workspace/evals/evals.json`. Use the [evals.json schema](schemas.md#evalsjson).
 
 ### Writing Assertions
 
@@ -128,19 +106,7 @@ Execute this task:
     └── ...
 ```
 
-Each eval directory gets an `eval_metadata.json`:
-
-```json
-{
-  "eval_id": 1,
-  "eval_name": "descriptive-name",
-  "prompt": "The user's task prompt",
-  "assertions": [
-    "The output file exists and is non-empty",
-    "The profit_margin column contains percentage values"
-  ]
-}
-```
+Create `eval_metadata.json` in each eval directory using the [metadata schema](schemas.md#eval_metadatajson).
 
 ### Parallel Execution
 
@@ -194,20 +160,7 @@ The frontmatter `description` determines whether the agent reads the skill. A ba
 
 ### Step 1: Generate Trigger Eval Queries
 
-Create 16–20 queries — a mix of should-trigger (8–10) and should-not-trigger (8–10).
-
-```json
-[
-  {
-    "query": "realistic user prompt that should trigger this skill",
-    "should_trigger": true
-  },
-  {
-    "query": "realistic prompt that should NOT trigger this skill",
-    "should_trigger": false
-  }
-]
-```
+Create 16–20 queries — a mix of should-trigger (8–10) and should-not-trigger (8–10) — using the [trigger-eval schema](schemas.md#trigger-evaljson).
 
 **For should-trigger queries:** vary phrasing (formal, casual, abbreviated). Include cases where the user doesn't name the skill explicitly but clearly needs it.
 
