@@ -1,54 +1,41 @@
 # Agent Guidelines
 
-## Conversational Style
+## Communication
 
-- Keep answers short and concise.
-- Technical prose only. Be direct.
-- No fluff or cheerful filler.
-- No emojis in commits, issues, PR comments, or code.
-- Answer the user's question first, before making edits or running implementation commands.
-- When responding to feedback or an analysis, explicitly say whether you agree or disagree before saying what you changed.
-- Don't predict or over-promise. State what works for the task at hand, not sweeping claims.
+- Use direct technical prose without filler.
+- Do not use emojis in commits, issues, PR comments, or code.
+- Answer the user's question before editing files or running implementation commands.
+- When responding to feedback or analysis, state whether you agree or disagree before describing changes.
+- State what works for the current task; do not predict or make sweeping claims.
 
-## Code Quality
+## Code
 
-The human owns the architecture. System boundaries, module APIs, and separation of concerns. Stay inside those boundaries; surface design decisions instead of inventing them silently.
+The human owns architecture, including system boundaries, module APIs, and separation of concerns. Stay within those decisions and surface new design choices instead of making them silently.
 
-- Read files in full before wide-ranging changes, before editing files you have not fully inspected, and when asked to investigate or audit. Do not rely on search snippets for broad changes.
-- Keep complexity low. Don't add abstractions, helpers, or indirection that aren't needed yet.
-- Inline single-line helpers that have only one call site.
-- Do not preserve backward compatibility unless the user asks for it.
-- Errors compound. Catch mistakes early rather than letting them accumulate across a session.
-- Do not call subagents unless the user explicitly requests subagent use.
+- Read files completely before broad changes, before editing a file not yet fully inspected, and for investigations or audits. Search snippets are insufficient for these tasks.
+- Prefer direct code. Add abstractions, helpers, or indirection only when current behavior requires them; inline single-line helpers with one call site.
+- Preserve backward compatibility only when the user requests it.
+- Use subagents only when the user explicitly requests them.
 
 ## Git
 
-Multiple agent sessions may run in the same cwd at once, each modifying different files. Git operations that touch unstaged, staged, or untracked files outside your own changes will stomp on other sessions' work.
+Multiple agent sessions may modify different files in the same working tree. Limit Git operations to this session's changes so other sessions' staged, unstaged, and untracked work remains untouched.
 
-Committing:
+When committing:
 
-- Only commit files YOU changed in THIS session.
-- Stage explicit paths (`git add <path1> <path2>`); never `git add -A` / `git add .`.
-- Run `git status` before committing and verify you are only staging your files.
-- Keep commit messages informative and concise. No emojis.
-- Never commit unless the user asks.
+- Commit only when the user asks.
+- Include only files changed in this session.
+- Stage explicit paths and run `git status` before committing to verify the staged set.
+- Use concise, informative commit messages.
 
-Never run:
+Never run `git reset --hard`, `git checkout .`, `git clean -fd`, `git stash`, `git add -A`, `git add .`, `git commit --no-verify`, or force-push.
 
-- `git reset --hard`, `git checkout .`, `git clean -fd`, `git stash`, `git add -A`, `git add .`, `git commit --no-verify`.
-
-If rebase conflicts occur:
-
-- Resolve conflicts only in files you modified.
-- If a conflict is in a file you did not modify, abort and ask the user.
-- Never force push.
+During a rebase, resolve conflicts only in files changed in this session. If another file conflicts, abort and ask the user.
 
 ## User Override
 
-If the user's instructions conflict with any rule in this document, ask for explicit confirmation before overriding. Only then execute their instructions.
+If a user request conflicts with this document, explain the conflict and ask for explicit confirmation before proceeding.
 
 ## System
 
-You are running on NixOS. The configuration for this system is managed in `~/Source/nixfiles`
-
-If a sandbox denies a write, stop immediately and ask the user to intervene. Do not attempt the write through another tool or command.
+Make system configuration changes in `~/Source/nixfiles`; the machine runs NixOS.
