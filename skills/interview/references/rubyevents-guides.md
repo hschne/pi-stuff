@@ -8,7 +8,7 @@
 - Speaker data: `~/Source/guides/_data/voices.yml`
 - Avatars: `~/Source/guides/assets/images/avatars/`
 
-Create `YY-MM-DD-<speaker-name>-<meetup-name>/` under the media directory. Rename its files to the same base:
+Create `YY-MM-DD-<speaker-name>-<meetup-name>/` under the media directory. For multiple interviewees, include each name in primary-first order. Rename the files to the same base:
 
 ```text
 26-07-20-julien-marseille-paris-rb/
@@ -31,17 +31,20 @@ Confirm the meetup site and RubyEvents profile. Use the RubyEvents profile for t
 
 ## Transcription
 
-`~/.scripts/transcribe` extracts mono audio automatically for local media before uploading it to AssemblyAI.
+`~/.scripts/transcribe` creates temporary mono audio for local media. Create the retained mono file first, then transcribe it:
 
 ```bash
 cd "/home/hschne/Videos/RubyEvents Guides/<interview-folder>"
-fnox exec -- ~/.scripts/transcribe "<recording>" \
+ffmpeg -i "<base>.mp4" -map 0:a:0 -ac 1 -c:a libvorbis "<base>-mono.ogg"
+fnox exec -- ~/.scripts/transcribe "<base>-mono.ogg" \
   --output "<base>-transcript.txt" \
-  --prompt "Interview between <host> and <speaker>, organizer of <meetup>. Include the speaker's native language or accent, meetup-organizing topics, speaker roles, and Ruby community vocabulary." \
+  --prompt "Interview between <host> and <speakers>, organizers of <meetup>. Include meetup-organizing topics, speaker roles, and Ruby community vocabulary." \
   --key-term "<speaker>" \
   --key-term "<meetup>" \
   --key-term "Ruby"
 ```
+
+Repeat `--key-term "<speaker>"` for each interviewee.
 
 Verify the transcript:
 
@@ -53,7 +56,7 @@ tail -n 10 "<base>-transcript.txt"
 
 ## Human sanitization checkpoint
 
-Before editing the full transcript, present 5–10 exchanges as paired samples:
+Present paired samples in this format:
 
 ```markdown
 ### Raw
@@ -65,9 +68,7 @@ Before editing the full transcript, present 5–10 exchanges as paired samples:
 **Julien:** ...
 ```
 
-Ask the human to approve the cleanup level. Apply only that approved level to the full interview. The target is a cleaned transcript, not a summary: preserve the order, examples, opinions, and individual voice.
-
-Use only first names in dialogue labels. Flag uncertain names and phrases instead of filling them with likely text.
+Use only first names in dialogue labels.
 
 ## Interview page
 
@@ -77,15 +78,22 @@ Read the latest comparable files in full before writing:
 cd ~/Source/guides
 cat _layouts/interview.html
 cat interviews/index.md
-cat _interviews/<comparable-interview>.md
+cat _interviews/<comparable-interview-1>.md
+cat _interviews/<comparable-interview-2>.md
 cat _data/voices.yml
 ```
 
-Follow the existing frontmatter and design. Add:
+Follow the existing frontmatter and design. For multiple interviewees:
+
+- title the page `Primary and Secondary on Event`
+- use an ordered `voices` frontmatter list with the primary interviewee first
+- keep that order in the source slug, title, links, and avatars
+
+Add:
 
 - the interview page under `_interviews/`
-- one speaker entry in `_data/voices.yml`
-- the speaker avatar under `assets/images/avatars/`
+- one entry in `_data/voices.yml` per interviewee
+- one avatar under `assets/images/avatars/` per interviewee
 - meetup, RubyEvents profile, and any other relevant social links
 - transcript highlights with unique anchors
 

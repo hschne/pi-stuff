@@ -7,5 +7,7 @@
       "executablePath": "/run/current-system/sw/bin/chromium",
       "ignoreDefaultArgs": ["--password-store=basic", "--use-mock-keychain"]
     }
-  }
+  },
+  "capabilities": ["core", "devtools"],
+  "outputDir": "/home/hschne/.cache/playwright-mcp/artifacts"
 }

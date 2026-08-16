@@ -1,7 +1,7 @@
 ---
 name: summarizer
 description: Save current session to the Wiki with a concise summary
-model: openai-codex/gpt-5.4-mini
+model: openai-codex/gpt-5.6-luna
 thinking: low
 systemPromptMode: append
 inheritProjectContext: true

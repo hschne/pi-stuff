@@ -1,6 +1,6 @@
 ---
 description: Summarize the session
-model: openai-codex/gpt-5.4-mini
+model: openai-codex/gpt-5.6-luna
 subagent: summarizer
 inheritContext: true
 skill: wiki

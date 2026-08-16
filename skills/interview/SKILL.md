@@ -11,15 +11,16 @@ Turn a recorded conversation into a faithful, readable, reviewable interview.
 ## Core Rules
 
 - Preserve the raw recording and raw transcript as the source of truth.
-- Treat sanitization as copyediting: remove filler, false starts, repetition, placeholders, and obvious grammar or transcription errors while preserving meaning, sequence, specificity, and voice.
+- Treat sanitization as copyediting: remove only distracting filler, false starts, repetition, placeholders, and obvious grammar or transcription errors while preserving meaning, sequence, specificity, and voice.
 - Use a human checkpoint before the full sanitization pass. Edit a representative sample, show raw and edited versions, and agree on the degree of cleanup.
 - Mark uncertain names or phrases for review. Verification is safer than a plausible guess.
+- Do not ask about or infer accents or native languages by default. Use them only when the user supplies them or they are needed to resolve transcription ambiguity.
 - Keep transcript speaker labels consistent and follow the destination project's existing interview structure.
 
 ## Workflow
 
 1. **Inspect**
-   - Read local instructions and existing published interviews in full.
+   - Read local instructions and at least two recent comparable published interviews in full.
    - Identify the recording date, speakers, event or subject, destination, naming convention, and verification commands.
 
 2. **Organize sources**
@@ -28,7 +29,7 @@ Turn a recorded conversation into a faithful, readable, reviewable interview.
    - Remove temporary logs only after transcription succeeds.
 
 3. **Gather context**
-   - Confirm speaker names, roles, accents, organizations, domain vocabulary, and relevant links from authoritative sources.
+   - Confirm speaker names, roles, organizations, domain vocabulary, and relevant links from authoritative sources.
    - Use this context in the transcription prompt and as a fact-checking aid.
 
 4. **Transcribe**
@@ -36,7 +37,8 @@ Turn a recorded conversation into a faithful, readable, reviewable interview.
    - Verify that the output is non-empty, covers the recording duration, and distinguishes the speakers.
 
 5. **Calibrate sanitization with the human**
-   - Select 5–10 representative exchanges containing filler, repetition, accented grammar, and proper nouns.
+   - Match the cleanup intensity of the comparable interviews.
+   - Select 5–10 representative exchanges containing filler, repetition, spoken grammar, and proper nouns.
    - Produce a conservative edited sample beside the raw text.
    - Ask the human to approve or adjust the cleanup level before editing the full transcript.
 

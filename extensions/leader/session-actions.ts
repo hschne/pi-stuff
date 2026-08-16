@@ -137,6 +137,15 @@ export function buildSessionEntries(pi: ExtensionAPI): TopLevelEntry {
           action: (ctx) => openSessionTree(pi, ctx),
         },
         {
+          key: "d",
+          label: "Change directory",
+          description: "migrate session",
+          action: (ctx) => {
+            ctx.ui.setEditorText("/cd");
+            setTimeout(() => process.stdin.emit("data", "\r"), 0);
+          },
+        },
+        {
           key: "c",
           label: "Compact",
           description: "LLM summary",
