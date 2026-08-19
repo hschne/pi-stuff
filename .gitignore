@@ -151,5 +151,7 @@ mcp-cache.json
 mcp-npx-cache.json
 auth.json
 run-history.jsonl
+missions/
+web-search-cache/
 
 npm/
