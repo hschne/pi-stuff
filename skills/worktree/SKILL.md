@@ -1,63 +1,78 @@
 ---
 name: worktree
-description: "Create, set up, diff, clean up, and integrate git worktrees using ~/.scripts/worktree. Use when a user asks to open a new worktree, work in a separate tree, compare a worktree to main, create a PR from a worktree, merge changes back, or delete a worktree."
+description: Create, configure, set up, inspect, and remove Git worktrees with the worktree command. Use when work should happen in a separate checkout or when changing worktree placement.
 ---
 
-# Worktree Skill
+# Worktree
 
-Use `~/.scripts/worktree` for the standard worktree workflow.
+Use `~/.scripts/worktree` rather than calling `git worktree` directly. Run
+`~/.scripts/worktree --help` for the current command and option reference.
 
-## Commands
+## Create a worktree
 
-Create a new worktree folder:
+For an interactive task description:
 
 ```bash
 ~/.scripts/worktree new "feature description"
 ```
 
-Set up a worktree after creation:
+For a deterministic name and branch:
 
 ```bash
-~/.scripts/worktree setup <worktree-directory>
+~/.scripts/worktree create <name> --branch <branch>
 ```
 
-Open a worktree in tmuxinator:
+Use lowercase letters, digits, and hyphens for `name`. Creation is complete when
+`worktree path <name>` prints an existing checkout on the requested branch.
+
+## Resolve worktrees
 
 ```bash
-~/.scripts/worktree open <worktree-directory>
+~/.scripts/worktree root
+~/.scripts/worktree path <name>
+~/.scripts/worktree list
 ```
 
-Delete a worktree:
+Use these commands instead of reconstructing paths. A configured directory
+prefix can make the checkout directory differ from its logical name.
+
+## Configure placement
+
+The default root is `<repo>/worktrees`. Repository-local Git configuration can
+override the root and add a directory prefix:
 
 ```bash
-~/.scripts/worktree destroy <worktree-directory>
+git config worktree-manager.root <path>
+git config worktree-manager.prefix <prefix>
 ```
 
-## Workflow
+Relative roots resolve from the repository root. `WORKTREE_ROOT` and
+`WORKTREE_PREFIX` provide temporary environment overrides. Verify placement
+with `worktree root` and `worktree path <name>` before creating a checkout.
 
-1. Create a new worktree.
-2. Run setup inside that worktree.
-3. Do the requested work inside the worktree.
-4. Either:
-   - create a PR from the worktree branch, or
-   - integrate the changes directly into main, usually with a squash merge.
-5. Clean up by deleting the worktree.
-
-## Notes for agents
-
-- `worktree new` only creates the git worktree and branch. It does not start tmux or another agent.
-- Run `worktree setup` explicitly after creating the worktree.
-- In this project, `bin/worktree-setup` copies `config/master.key` and the SQLite development database from the main checkout before running `bin/rails db:prepare`.
-- When asked to create a PR, commit in the worktree, push the branch, then use the `gh` skill.
-- When asked to integrate directly into main, use a deliberate git workflow.
-- When asked to clean up, ensure no uncommitted work is being lost before destroying the worktree.
-- **`FIX:` comments**: Hans may leave `# FIX: ...` comments directly in source files while reviewing a diff. Always grep for these before starting work: `grep -r "FIX:" .` — address each one, then remove the comment.
-- **`worktree diff`** opens an interactive visual diff in the terminal (DiffView). Do **not** run it — it is a manual user command only.
-
-## Typical agent flow
+## Run project setup
 
 ```bash
-~/.scripts/worktree new "improve login flow"
-~/.scripts/worktree setup 26-03-improve-login-flow
-cd worktrees/26-03-improve-login-flow
+~/.scripts/worktree setup <name>
 ```
+
+If `bin/worktree-setup` is executable in the checkout, the command runs it from
+that checkout. Setup is complete when the project script exits successfully.
+
+## Inspect changes
+
+`worktree diff <name>` opens interactive DiffView. Run it only when the user
+requests an interactive diff.
+
+For noninteractive inspection, use ordinary read-only Git commands inside the
+path returned by `worktree path <name>`.
+
+## Remove a worktree
+
+```bash
+~/.scripts/worktree destroy <name>
+```
+
+The command refuses dirty worktrees. Inspect and preserve changes before using
+`--force`. Removal is complete when `worktree path <name>` no longer exists and
+the entry is absent from `worktree list`.
