@@ -1,7 +1,7 @@
 {
   "quietStartup": true,
   "defaultProjectTrust": "always",
-  "lastChangelogVersion": "0.84.2",
+  "lastChangelogVersion": "0.84.4",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
   "theme": "tokyo-night",
@@ -9,7 +9,8 @@
     "npm:pi-mcp-adapter",
     "npm:pi-prompt-template-model",
     "npm:pi-subagents",
-    "npm:pi-web-access"
+    "npm:pi-web-access",
+    "npm:@ff-labs/pi-fff"
   ],
   "defaultThinkingLevel": "medium",
   "hideThinkingBlock": false,
