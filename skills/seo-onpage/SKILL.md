@@ -29,7 +29,7 @@ Give the searcher what the title promised, fast, and prove it mechanically.
 6. Add or correct JSON-LD for the matching type.
 7. Verify against the rendered page.
 
-Implementation is platform-specific. On a Jekyll site, wire titles/description/canonical/OG/JSON-LD through `jekyll-seo-tag` rather than hand-writing tags — see the `jekyll` skill.
+Implementation is platform-specific. On Jekyll, configure titles, descriptions, canonical URLs, Open Graph data, and JSON-LD through `jekyll-seo-tag` rather than hand-writing duplicate tags.
 
 ## Verify
 

@@ -1,101 +1,16 @@
-### Visual Inspection with Chrome DevTools MCP
+# Visual Browser Inspection
 
-**Important**: When the user explictly requests this, use Chrome DevTools to visually verify the feature and check for JavaScript errors. 
+Use browser developer tools when the user explicitly requests visual verification or when rendered behavior, JavaScript, network activity, DOM structure, or computed styles are material to the change.
 
-**Load the DevTools controller:**
+## Workflow
 
-```
-read({ path: "/home/hschne/.pi/agent/skills/chrome-devtools/SKILL.md" })
-```
+1. Open the running feature at the relevant URL.
+2. Exercise the affected success and failure paths as a user would.
+3. Inspect console output and failed network requests after each path.
+4. Inspect rendered DOM and computed styles when structure or layout is in question.
+5. Capture screenshots for states that need review or durable evidence.
+6. Fix observed errors, then repeat the same interaction.
 
-**Common verification tasks:**
+Record the URL, tested interaction, viewport when relevant, console/network result, and screenshot path.
 
-#### Navigate to the Feature
-
-Open the page in the browser and interact with it:
-
-```
-mcp({
-  tool: "chrome_devtools_navigate",
-  args: '{"url": "http://localhost:3000/path/to/feature"}'
-})
-```
-
-#### Inspect for JavaScript Errors
-
-Check the console for any JavaScript errors or warnings:
-
-```
-mcp({
-  tool: "chrome_devtools_get_console",
-  args: '{}'
-})
-```
-
-If errors appear, fix them before proceeding.
-
-#### Take Screenshots for Review
-
-Capture the page state for your own review or to show the user:
-
-```
-mcp({
-  tool: "chrome_devtools_screenshot",
-  args: '{"fileName": "feature-screenshot"}'
-})
-```
-
-#### Interact with the Feature
-
-Simulate user interactions (clicks, form submissions, etc.):
-
-```
-mcp({
-  tool: "chrome_devtools_click",
-  args: '{"selector": ".button-class"}'
-})
-```
-
-```
-mcp({
-  tool: "chrome_devtools_fill_form",
-  args: '{"formSelector": "form#my-form", "values": {"field_name": "value"}}'
-})
-```
-
-#### Check Network Requests
-
-Verify API calls and network activity:
-
-```
-mcp({
-  tool: "chrome_devtools_get_network_logs",
-  args: '{}'
-})
-```
-
-Look for failed requests (4xx, 5xx status codes) or unexpected API calls.
-
-#### Verify DOM Structure
-
-Inspect the rendered HTML to ensure elements are properly placed:
-
-```
-mcp({
-  tool: "chrome_devtools_get_dom",
-  args: '{"selector": ".container"}'
-})
-```
-
-#### Check Styles & Layout
-
-Use DevTools to verify CSS is applied correctly:
-
-```
-mcp({
-  tool: "chrome_devtools_get_element_styles",
-  args: '{"selector": ".element-to-inspect"}'
-})
-```
-
-
+**Complete when:** the affected paths work in the rendered application, no related console or network failures remain, and visual evidence matches the implemented state.

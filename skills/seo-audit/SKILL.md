@@ -17,11 +17,11 @@ Inspect real pages and hand back a ranked action plan where every item can be pr
 ## Workflow
 
 1. Pick target URLs (from `.seo/BRIEF.md`, the sitemap, or the user).
-2. For each URL, run the checks from the focused skills rather than reinventing them:
-   - **Indexability & technical** — status, robots, canonical, sitemap, redirects, mobile (`seo-technical`).
-   - **On-page & structured data** — title, meta, one H1, headings, answer-first intro, internal links, alt text, JSON-LD (`seo-onpage`).
-   - **Core Web Vitals** — LCP/INP/CLS, field data first, then a lab trace (`seo-performance`).
-   - **AI-search readiness** — answer-first structure, cited facts, AI crawlers allowed.
+2. For each URL, check:
+   - **Indexability & technical** — status, robots, canonical, sitemap, redirects, and mobile rendering.
+   - **On-page & structured data** — title, meta, one H1, headings, answer-first intro, internal links, alt text, and JSON-LD.
+   - **Core Web Vitals** — LCP, INP, and CLS using field data first, then a lab trace.
+   - **AI-search readiness** — answer-first structure, cited facts, and crawler access.
 3. Aggregate into `.seo/AUDIT.md` and present the top few items first.
 
 ## Output

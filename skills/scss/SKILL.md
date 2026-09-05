@@ -5,7 +5,7 @@ description: SCSS authoring conventions for maintainable, scalable stylesheets. 
 
 # SCSS
 
-Technical guidance for writing clean SCSS. Covers SCSS-specific compilation features — for CSS output concerns (layout, selectors, sizing, colors, motion), use the **css** skill instead.
+Technical guidance for writing clean SCSS. It governs SCSS compilation and authoring; evaluate layout, selectors, sizing, colors, and motion in the compiled CSS.
 
 ## When to Use This Skill
 
@@ -48,14 +48,9 @@ Technical guidance for writing clean SCSS. Covers SCSS-specific compilation feat
 4. Check compiled CSS output for specificity bloat or unexpected selectors.
 5. Run the project's linter/formatter if configured.
 
-## Alignment with CSS Skill
+## Compiled CSS Boundary
 
-This skill and the **css** skill are complementary:
-
-- **scss** covers authoring concerns: file organization, `@use`, nesting, mixins, functions, SCSS variables.
-- **css** covers output concerns: layout, selectors, sizing, colors, motion, custom properties, cascade layers.
-
-When both apply (e.g., writing a mixin that outputs layout CSS), read both skills. If guidance conflicts, prefer the **css** skill for output-level decisions and this skill for authoring-level decisions.
+SCSS authoring decisions cover file organization, `@use`, nesting, mixins, functions, and compile-time variables. Judge the generated CSS separately for layout, specificity, sizing, color, motion, custom properties, and cascade behavior. Output correctness wins over source convenience.
 
 ## References
 

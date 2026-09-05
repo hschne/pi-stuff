@@ -1,19 +1,11 @@
 ---
 name: typescript
-description: >-
-  TypeScript type system, strict mode, and TS-specific patterns beyond JavaScript fundamentals.
-  Invoke whenever task involves any interaction with TypeScript code — writing, reviewing,
-  refactoring, debugging .ts/.tsx files, type definitions, generics, narrowing, tsconfig, or
-  type-level programming.
+description: TypeScript type-system and strict-mode guidance. Use when writing, reviewing, refactoring, or debugging .ts/.tsx files, type definitions, generics, narrowing, tsconfig, or type-level code.
 ---
 
 # TypeScript
 
-<prerequisite>
-This skill extends the JavaScript skill. Load `javascript` first — naming,
-ternary operator rules, async patterns, and module conventions are defined there and
-not duplicated here.
-</prerequisite>
+Follow the project's established JavaScript naming, control-flow, async, and module conventions. The rules below govern TypeScript-specific type and compiler decisions.
 
 **Types encode intent. Let the compiler prove the rest.**
 
@@ -228,8 +220,3 @@ When **reviewing** TypeScript code:
 
 - Cite the specific issue and show the fix inline.
 - Don't lecture — state what's wrong and how to fix it.
-
-## Integration
-
-The **javascript** skill is a prerequisite. The JavaScript skill governs code patterns; this skill governs type-level
-choices for codebases that already use TypeScript.

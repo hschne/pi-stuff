@@ -1,124 +1,103 @@
 ---
 name: design-flow
-description: Run the full design-to-build workflow as a guided sequence. Orchestrates all designer skills in order, from grilling through review. Use when user wants to go through the complete design process, start a project from scratch, run the full flow, or mentions "design flow" or "full workflow".
+description: Run a complete guided design-to-build workflow from requirements through structure, visual system, implementation planning, and build. Use when the user wants the full design process, wants to start a UI project from scratch, or asks for a design flow.
 ---
 
-This skill orchestrates the full designer workflow by running each skill in sequence. You are a guide walking the designer through each phase. Do not rush. Each phase must be completed and confirmed before moving to the next.
+# Design Flow
 
-## Example prompts
+Guide one feature from discovery through implementation. Complete and confirm each phase before starting the next.
 
-- "Run the full design flow"
-- "Walk me through the complete process for a new project"
-- "Start from scratch and take me through everything"
-- "Design flow for a dashboard app"
+## Sequence
 
-## The Sequence
-
-```
-1. Grill Me          → Clarify thinking
-2. Design Brief      → Document intent
-3. Design Architecture  → Define structure
-4. Design Tokens     → Establish visual system
-5. Design Tasks    → Plan the build
-6. Design Principles   → Build it
+```text
+1. Discover      → resolve the product and experience decisions
+2. Brief         → document intent and constraints
+3. Architecture  → define navigation, structure, and flows
+4. Tokens        → establish the visual system
+5. Tasks         → plan vertical implementation slices
+6. Build         → implement and verify each slice
 —
-7. Design Review     → Run separately when ready
+7. Review        → run separately when built UI exists
 ```
 
 ## Rules
 
-1. **At the start**, tell the designer what the full sequence looks like (phases 1-6, with review available separately) and ask if they want to skip any phases. Common skip patterns:
-   - Already have a clear idea → skip grill-me
-   - Single component, not a full page → skip design-architecture
-   - Existing project with tokens → skip design-tokens
+1. At the start, show phases 1–6 and ask whether any should be skipped. Common reasons:
+   - the problem and audience are already settled → skip discovery;
+   - a single component has no navigation or page-flow decisions → skip architecture;
+   - the project already has a complete token system → skip tokens.
+2. Before each phase, state its output and ask whether to begin.
+3. After each phase, summarize the artifact, key decisions, and open questions. Wait for confirmation before continuing.
+4. Reconcile each completed artifact with the next phase rather than treating phases independently.
+5. If the user stops, record what is complete and identify the next phase.
 
-2. **Before each phase**, announce which phase you are entering and what it will produce. Example: "Phase 2: Design Brief. I'll interview you about the project and produce a DESIGN_BRIEF.md file. Ready?"
+## Phase Contracts
 
-3. **During each phase**, read the corresponding SKILL.md file and follow its full instructions. Do not summarize or abbreviate the skill. Run it properly.
+### 1. Discover
 
-4. **After each phase**, summarize what was produced (the file name, the key decisions, any open questions) and ask: "Ready to move to the next phase?" Wait for confirmation.
+Inspect prior project context, then question the user one decision at a time. Recommend an answer with each question. Resolve:
 
-5. **Between phases**, check if the output from the previous phase changes anything about the next phase. For example, if the brief names a philosophy, mention that the tokens phase will use it.
+- primary user and job to be done;
+- desired outcome and success signal;
+- emotional tone and aesthetic references or anti-references;
+- content and critical states;
+- device, accessibility, performance, framework, and brand constraints.
 
-6. **The designer can stop at any point.** If they say "that's enough for now," summarize where they are in the sequence and what the next phase would be when they return.
+**Complete when:** consequential decisions are resolved or explicitly marked open.
 
-## Phase Details
+### 2. Brief
 
-### Phase 1: Grill Me
+Inspect existing components, tokens, themes, fonts, layouts, and UI dependencies. Save `.agents/.design/<feature-slug>/DESIGN_BRIEF.md` with:
 
-Read the existing `grill-me` skill at `~/.pi/agent/skills/grill-me/SKILL.md` and follow its instructions.
-**Produces**: Shared understanding of the project. No file output.
-**Transition**: "We've resolved the key decisions. Ready to capture this as a design brief?"
+- problem and experience-led solution;
+- up to three experience principles;
+- aesthetic direction and tone;
+- existing patterns to preserve;
+- component inventory;
+- key interactions and responsive behavior;
+- accessibility requirements and out-of-scope items.
 
-### Phase 2: Design Brief
+**Complete when:** the user approves the brief and its open questions are explicit.
 
-Read the `design-brief` skill at `~/.pi/agent/skills/design-brief/SKILL.md` and follow its instructions.
-**Produces**: `.agents/.design/<feature-slug>/DESIGN_BRIEF.md`.
-**Transition**: "The brief is saved. Next is design architecture, where we'll define the page structure and navigation. Skip this if you're building a single component. Continue?"
+### 3. Architecture
 
-### Phase 3: Design Architecture
+Define only the structural decisions needed by the feature:
 
-Read the `design-architecture` skill at `~/.pi/agent/skills/design-architecture/SKILL.md` and follow its instructions.
-**Produces**: `.agents/.design/<feature-slug>/DESIGN_ARCHITECTURE.md`.
-**Transition**: "IA is defined. Next we'll generate design tokens (colors, spacing, typography) based on the philosophy from the brief. Continue?"
+- navigation and entry points;
+- page/content hierarchy;
+- URL patterns when relevant;
+- primary, alternate, empty, error, and recovery flows;
+- responsive structural changes;
+- boundaries between pages and reusable components.
 
-### Phase 4: Design Tokens
+Save `.agents/.design/<feature-slug>/DESIGN_ARCHITECTURE.md`.
 
-Read the `design-tokens` skill at `~/.pi/agent/skills/design-tokens/SKILL.md` and follow its instructions.
-**Produces**: Token file (CSS variables, Tailwind config, or theme file depending on stack).
-**Transition**: "Tokens are set. Next I'll break the brief into a task list so we can build in order. Continue?"
+**Complete when:** every critical user goal has a path through the proposed structure.
 
-### Phase 5: Design Tasks
+### 4. Tokens
 
-Read the `design-tasks` skill at `~/.pi/agent/skills/design-tasks/SKILL.md` and follow its instructions.
-**Produces**: `.agents/.design/<feature-slug>/TASKS.md`.
-**Transition**: "Tasks are ready. Now we build. I'll start with the first task on the list. Continue?"
+Inspect and extend the existing visual system rather than replacing it. Define semantic light and dark values for color, typography, spacing, layout, radii, shadows, motion, and breakpoints in the project’s native format. Derive choices from the approved aesthetic direction and record deliberate deviations.
 
-### Phase 6: Design Principles
+**Complete when:** components can be built without inventing recurring visual values locally.
 
-Read the `design-principles` skill at `~/.pi/agent/skills/design-principles/SKILL.md` and follow its instructions.
-Work through the tasks from `TASKS.md` in order. After completing each task, check it off and confirm with the designer before moving to the next task.
-**Produces**: Built components and pages.
-**Transition**: "The flow is complete. Your brief, design architecture, tokens, and tasks are all saved in the project. When you're ready for a design review, run `/design-review` and I'll critique the build against the brief."
+### 5. Tasks
 
-**The flow ends here.** Phase 7 is not automatic.
+Break the approved design into ordered vertical slices. Each task includes structure, styling, interaction, states, reuse/new-component status, dependencies, and a visual verification condition. Put foundational, risky, and visually defining work early. Save `.agents/.design/<feature-slug>/TASKS.md`.
 
-### Phase 7: Design Review (on request only)
+**Complete when:** each task fits one working session and produces an independently inspectable result.
 
-This phase does NOT run automatically. It only runs if:
+### 6. Build
 
-- The designer explicitly asks for a review during the flow
-- The designer runs `/design-review` separately after building
+Implement tasks in order using existing components and project conventions. Start mobile-first, preserve the approved aesthetic direction, verify interactions and responsive states, and check off each completed task. Ask before proceeding to the next slice.
 
-The review requires built code to examine. If no components or pages have been built yet, do not run this phase. Instead, remind the designer: "Run `/design-review` once you have something built. It will check the output against the brief."
+**Complete when:** all approved tasks pass project checks and their visual verification conditions.
 
-When triggered, read the `design-review` skill at `~/.pi/agent/skills/design-review/SKILL.md` and follow its instructions. The review will capture screenshots of the running application using Playwright MCP (preferred), Chrome DevTools MCP (fallback), or by asking the user to provide them manually if no browser tool is available.
+### 7. Review on Request
 
-**Produces**: `.agents/.design/<feature-slug>/DESIGN_REVIEW.md` + screenshots saved in `.agents/.design/<feature-slug>/screenshots/`.
-**Transition**: "Review is done. Screenshots are saved in `.agents/.design/<feature-slug>/screenshots/`. If there are must-fix items, I can address them now."
+Run only when built UI exists and the user asks for review. Exercise the running interface, capture desktop, tablet, mobile, dark-mode, and relevant component states, then compare them with the brief and architecture. Save prioritized findings to `.agents/.design/<feature-slug>/DESIGN_REVIEW.md` and evidence under `screenshots/`.
 
-## Project Files Structure
+**Complete when:** every finding cites visible evidence and distinguishes must-fix issues from optional polish.
 
-All design flow artifacts are saved under `.agents/.design/<feature-slug>/` where `<feature-slug>` is a short, lowercase, hyphenated name derived from the feature being designed. This ensures multiple features can be designed independently without overwriting each other.
+## Resume
 
-```
-.agents/.design/
-└── <feature-slug>/
-    ├── DESIGN_BRIEF.md              ← Phase 2: Project intent, goals, aesthetic direction
-    ├── DESIGN_ARCHITECTURE.md  ← Phase 3: Navigation, page structure, user flows
-    ├── DESIGN_TOKENS.*              ← Phase 4: Colors, spacing, typography, shadows (CSS/Tailwind/theme)
-    ├── TASKS.md                     ← Phase 5: Ordered build checklist from the brief
-    ├── DESIGN_REVIEW.md             ← Phase 7: Prioritized critique against the brief
-    └── screenshots/                 ← Phase 7: Visual evidence from the running app
-        ├── review-[page]-desktop-1280.png
-        ├── review-[page]-tablet-768.png
-        ├── review-[page]-mobile-375.png
-        ├── review-[page]-dark-mode-*.png
-        └── review-[component]-[state].png
-```
-
-The `screenshots/` subfolder is created during the design review phase. All visual evidence of the review (responsive breakpoints, interactive states, dark mode) is saved here with descriptive filenames so findings in `DESIGN_REVIEW.md` are traceable.
-
-## If the Designer Returns Mid-Flow
-
-Check the `.agents/.design/` folder for existing feature subfolders. If files from earlier phases exist (DESIGN_BRIEF.md, DESIGN_ARCHITECTURE.md, TASKS.md) inside a feature folder, read them to understand where the designer left off. Ask which feature to resume if multiple folders exist. Resume from the next incomplete phase.
+Artifacts live under `.agents/.design/<feature-slug>/`. When resuming, inspect existing feature folders, ask which feature applies if ambiguous, read its artifacts, and continue from the first incomplete phase.

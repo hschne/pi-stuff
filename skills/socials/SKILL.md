@@ -1,79 +1,116 @@
 ---
 name: socials
-description: Create polished social-media images from screenshots or custom HTML compositions. Use when framing a screenshot for sharing, capturing a page or terminal for social media, or designing a branded Open Graph or repository social-preview image with a project name, tagline, URL, and embedded product image.
+description: Draft, review, publish, and verify social-media posts through a Markdown-first workflow. Use for one-off posts, platform variants, scheduled campaigns, post promotion, or publishing through Buffer, with optional social images and public media hosting.
 ---
 
-# Social Images
+# Social Posts
 
-Create restrained screenshot cards or custom branded social previews while keeping the product legible and the project identity clear.
+Take one post or a multi-post campaign from source material to verified publication. The approved Markdown draft is the source of truth.
 
 ## Core Rules
 
-- Choose the output branch first: frame an existing screenshot, or compose a branded Open Graph image in HTML.
-- Inspect reference images, existing OG HTML, design tokens, and configured fonts before choosing a visual direction. Prior art is the house style.
-- Keep branded preview copy sparse. A project name, one-line description, and URL are usually sufficient.
-- Show a review render before capturing the final branded image. Composition feedback is cheaper to apply in HTML than after handoff.
-- Read the final image and verify dimensions, legibility, cropping, and balance.
+- Write the exact post content in `~/Documents/Wiki/areas/writing/social/` before publishing it.
+- Treat drafting and publishing as separate scopes. Approval of copy or media does not authorize a Buffer mutation.
+- Adapt copy to each selected platform instead of mechanically truncating one universal version.
+- Never invent claims, quotations, links, dates, handles, or engagement.
+- Make media conditional. Text-only posts do not need image work or hosting.
+- Re-read the approved Markdown immediately before publishing and verify every created post afterward.
 
-## Frame a Screenshot
+## 1. Establish the Post
 
-1. Resolve the source image:
-   - Read a supplied image and confirm it contains the intended content.
-   - For a page or application, load the `browser` skill and capture the requested state.
-   - For a terminal, ask for a screenshot unless the environment provides a deterministic capture mechanism.
-2. Frame it with the bundled script:
+Determine from the request and available source material:
 
-   ```bash
-   <skill-dir>/scripts/frame-screenshot.sh INPUT.png -o OUTPUT.png
-   ```
+- the post's subject, purpose, audience, and call to action;
+- whether this is a one-off post or several related items;
+- target platforms and whether each needs distinct copy;
+- publish now, add to queue, save as draft, or schedule at explicit local times;
+- required links, tags, mentions, images, video, and alt text.
 
-3. Read `OUTPUT.png` and check:
-   - no content is cropped;
-   - text remains legible;
-   - margins are balanced;
-   - corners and shadow render cleanly;
-   - the background supports rather than competes with the screenshot.
+Ask only for consequential gaps. Do not require campaign metadata for a one-off post.
 
-The default output is a 2400×1350 PNG with a restrained Tokyo Night blue-to-slate gradient. Adjust `--from` and `--to` only when the project calls for another palette.
+## 2. Establish the Voice
 
-## Compose a Branded Open Graph Image
+For Hans's personal accounts, load the `writing` skill and inspect 2-4 relevant recent files from:
 
-Use HTML when the image needs project identity, typography, and art direction beyond simple framing. HTML keeps layout, type, and screenshot bleed precise and easy to revise.
-
-1. Gather the project name, one-line description, canonical URL, and product screenshot or video still.
-2. Inspect any reference OG image and its source HTML. Match its structural conventions while adapting the composition to the current project.
-3. Write a retained source page such as `doc/og/index.html`:
-   - fix `html` and `body` to the target dimensions, commonly `1280×640` for GitHub;
-   - set `overflow: hidden`;
-   - use the project's configured font with durable fallbacks;
-   - embed the screenshot through a relative path;
-   - let the screenshot bleed or overlap when that gives the product enough visual weight;
-   - keep the project name dominant and readable at thumbnail size.
-4. Serve the page over HTTP so relative assets and fonts render consistently:
-
-   ```bash
-   (cd doc && python3 -m http.server 8917)
-   ```
-
-5. Use the `browser` skill to resize the viewport to the exact target dimensions and capture a temporary review PNG with CSS-pixel scaling.
-6. Read the review PNG and present it for approval. Revise the HTML until approved.
-7. Capture the approved viewport to the final asset path, for example `doc/assets/og.png`.
-8. Stop the HTTP server and keep the HTML source beside the generated asset so future changes remain reproducible.
-
-## Verification
-
-Run an image inspector and confirm the exact output dimensions:
-
-```bash
-identify OUTPUT.png
+```text
+~/Documents/Wiki/areas/writing/social/
 ```
 
-Then read the image and check that:
+For an organization or project, inspect its prior posts and brand guidance instead. Use the account's established voice; do not impose Hans's first-person voice on organizational copy.
 
-- the project name survives thumbnail display;
-- the copy has no accidental wrapping;
-- the screenshot remains recognizable without dominating the identity;
-- no edge clipping looks accidental;
-- the final file matches the approved review render.
+Preserve concrete supplied wording and factual claims. Write directly, without engagement bait or generic promotional filler.
 
-Return the absolute output path and note the retained HTML source when applicable.
+## 3. Create the Markdown Draft
+
+Read the [social draft reference](references/social-draft.md), then create or update a lowercase, dated Markdown file in the socials wiki. Existing documents may keep their current structure if every publishable variant is unambiguous.
+
+Write exact copy for every selected platform. Include local schedule details, media paths, public media URLs, and alt text only when applicable. Clearly mark unresolved fields rather than guessing them.
+
+Run:
+
+```bash
+qmd update
+```
+
+Then validate supported short-form limits:
+
+```bash
+node <skill-dir>/scripts/validate-posts.mjs <draft-file>
+```
+
+Revise until validation passes. Present the Markdown path and complete draft for review.
+
+Completion: the Markdown contains the exact intended content and the user has approved the copy and proposed media.
+
+## 4. Prepare Media When Needed
+
+If existing media is already suitable, read it and verify its content and dimensions. If new or modified artwork is required, load the `social-images` skill and obtain visual approval.
+
+Buffer requires remotely fetchable media URLs. Resolve them in this order:
+
+1. Use an already approved public URL.
+2. Use the project's documented upload task and read its resulting manifest.
+3. If the project has no uploader, load the `cf` skill and its public R2 media reference.
+
+Never assume a Cloudflare account, bucket, domain, or key prefix from another project. Fetch every resulting URL and verify the public object before adding it to the draft.
+
+Update the Markdown with the approved local path, public URL, and concise alt text, then run `qmd update` again.
+
+Completion: each media post has an approved, publicly fetchable asset and alt text.
+
+## 5. Prepare the Publishing Plan
+
+If the user requested drafting only, stop after approval. Otherwise load the `buffer` skill and prepare a plan from the approved Markdown.
+
+The plan must show, for every mutation:
+
+- Buffer organization and exact channel;
+- action and scheduling mode;
+- local date, time, timezone, and offset when scheduled;
+- exact copy;
+- public media URL and alt text when present;
+- platform validation result;
+- queue or plan capacity when relevant.
+
+### Publishing Approval Gate
+
+Ask for explicit approval of the complete mutation plan. Copy approval does not satisfy this gate.
+
+## 6. Publish and Verify
+
+After approval:
+
+1. Re-read the Markdown and ensure the plan still matches it.
+2. Publish through Buffer exactly as approved.
+3. Stop on the first failure and report successful post IDs plus the failed mutation.
+4. Read every created post back and compare its channel, text, schedule, status, and media with the approved plan.
+5. Append post IDs, observed status, verification results, and residual issues to the Markdown.
+6. Run `qmd update`.
+
+Completion: every approved mutation is read back correctly, or the exact partial state is recorded and reported.
+
+## References
+
+| Topic        | When to Read                            | Reference                                  |
+| ------------ | --------------------------------------- | ------------------------------------------ |
+| Social draft | Creating or updating the Markdown draft | [social draft](references/social-draft.md) |

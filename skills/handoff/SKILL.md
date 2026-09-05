@@ -17,7 +17,7 @@ Choose the destination based on the current directory:
 
 Use a descriptive Markdown filename that identifies the handoff's focus.
 
-Include a "suggested skills" section in the document, which suggests skills that the agent should invoke.
+Include a "Suggested capabilities" section describing any specialized knowledge or tooling the next agent will need, without naming agent skills.
 
 Do not duplicate content already captured in other artifacts such as specs, plans, ADRs, issues, commits, or diffs. Reference them by path or URL instead.
 

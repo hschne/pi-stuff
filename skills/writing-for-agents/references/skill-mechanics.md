@@ -15,6 +15,10 @@ skill-name/
 
 `SKILL.md` is required. Add other directories only when they carry live material.
 
+## Independence
+
+A skill must never name, invoke, or link to another skill. State the required behavior or capability and let the harness route supporting skills. Package-local references remain allowed.
+
 ## Frontmatter
 
 ```yaml
@@ -33,12 +37,10 @@ description: What the skill does. Use when the relevant branches occur.
 
 Invocation trades two loads:
 
-- **Model-invoked:** keep a model-facing description. The agent and other skills can discover it, but its description consumes context on every turn.
+- **Model-invoked:** keep a model-facing description. The harness can discover it automatically, but its description consumes context on every turn.
 - **User-invoked:** set `disable-model-invocation: true`. The description becomes a human-facing summary and only the human can invoke it, trading context load for the need to remember it.
 
-Choose model invocation when autonomous discovery or cross-skill reach matters. Choose user invocation when human judgment should decide and automatic discovery adds little value.
-
-When user-invoked skills become difficult to remember, use one user-invoked router skill that names them and their selection conditions. The router guides the human; it cannot autonomously invoke skills hidden from the model.
+Choose model invocation when autonomous discovery matters. Choose user invocation when human judgment should decide and automatic discovery adds little value. Keep selection and routing outside skill documents.
 
 ## Progressive Disclosure
 

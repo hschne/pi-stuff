@@ -154,15 +154,17 @@ When asked to edit prose:
 4. Revise with minimal unnecessary churn.
 5. Preserve the user's real opinions and structure.
 
-## Social post workflow
+## Social post voice
 
-For LinkedIn / X / short promo copy:
+For LinkedIn, X, Bluesky, and short promotional copy:
 
 - Be honest, not clickbaity.
 - Do not invent controversy.
 - Summarize the main claim plainly.
-- Keep Hans's voice. Direct, slightly opinionated, a little playful when appropriate.
+- Keep Hans's voice: direct, slightly opinionated, and a little playful when appropriate.
 - Avoid hype words and engagement bait.
+
+This section governs prose and voice. For Markdown-first drafting, platform variants, media, approval, and publishing, use the social-post workflow.
 
 ## Quick self-check before returning text
 

@@ -53,7 +53,7 @@ Config changes are not picked up by `jekyll serve --watch`; restart the server.
 
 ### 3. Layout and SEO
 
-This skill owns only the Jekyll wiring of SEO metadata. For SEO strategy and verification — keyword/intent targeting, on-page optimization, technical/crawl checks, Core Web Vitals, and audits — use the `seo-flow` skill and its suite (`seo-keywords`, `seo-onpage`, `seo-technical`, `seo-performance`, `seo-audit`). What follows is just how to emit correct tags in Jekyll.
+This workflow owns only Jekyll's metadata wiring. Establish keyword intent, page content, crawlability, Core Web Vitals, and audit priorities separately; the steps below cover how Jekyll emits correct tags.
 
 `<head>` needs the things the plugin does not emit, plus `{% seo %}`:
 

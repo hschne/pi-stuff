@@ -90,7 +90,7 @@ Next action: [single concrete action]
 - [ ] Asset generation and lint passed
 - [ ] Public R2 media fetched successfully
 - [ ] X and Bluesky limits passed
-- [ ] Buffer capacity passed before mutation
+- [ ] Current Buffer account and channel capacity passed before mutation
 - [ ] Every scheduled post read back successfully
 
 ## Residual Issues

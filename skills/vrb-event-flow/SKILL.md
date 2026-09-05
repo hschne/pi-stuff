@@ -52,7 +52,7 @@ Completion: the user explicitly approves every generated asset and checks pass.
 
 ## Phase 3: Provisional Promotion
 
-1. Read the writing and wiki skills.
+1. Inspect nearby Vienna.rb promotion documents to match the established voice, format, and wiki organization.
 2. Create `~/Documents/Wiki/areas/writing/social/YY-MM-DD-vienna-rb-<event-number>-promotion.md` using the promotion reference.
 3. Generate this standard campaign:
    1. event announcement
@@ -80,7 +80,7 @@ Ask the user to approve the generated assets and provisional promotion Markdown.
 
 ## Phase 4: Meetup and Luma
 
-1. Read the browser skill and use `playwright-live` so the user can inspect the real browser.
+1. Use `playwright-live` with the visible shared browser so the user can inspect the real forms.
 2. Open separate Meetup and Luma creation tabs. Populate both from `EVENT.md`; the brief is canonical, not either platform.
 3. Fill Meetup first with `out/event-2100x1200.png`.
 4. Fill Luma separately with `out/event-2100x2100.png`. Use its rich-text editor rather than pasting Markdown or Meetup separators. Create real headings, emphasis, dividers, and links.
@@ -103,7 +103,7 @@ node /home/hschne/.pi/agent/skills/vrb-event-flow/scripts/validate-social.mjs <p
 3. Revise until every X post is within its weighted 280-character limit and every Bluesky post is within 300 graphemes and 3,000 UTF-8 bytes.
 4. Run `mise run upload`. Read `out/media.json` and map each approved post to its content-addressed public R2 image URL.
 5. Use Buffer MCP `get_account`, `list_channels`, and `list_posts` to identify the organization, exact X/Bluesky/LinkedIn channel IDs, and existing scheduled count per channel.
-6. Confirm the full campaign fits within Buffer's 10-scheduled-post limit on every channel. If any channel lacks capacity, stop before creating anything.
+6. Read the current account and channel limits and confirm the full campaign fits on every channel. If any channel lacks capacity, stop before creating anything.
 7. Present the complete mutation plan: exact copy, local time, channel, image, alt text, character usage, and resulting capacity. Update `EVENT.md`.
 
 ### Approval Gate 3

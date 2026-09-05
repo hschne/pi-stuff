@@ -47,23 +47,28 @@ Generated from: .agents/.design/<feature-slug>/DESIGN_BRIEF.md
 Date: [date]
 
 ## Foundation
+
 - [ ] **[Task name]**: [One sentence describing what to build and what "done" looks like]. _Reuses: [existing components/tokens if any]._
 - [ ] **[Task name]**: [Description]. _New component._
 
 ## Core UI
+
 - [ ] **[Task name]**: [Description]. _Depends on: [task name if any]._
 - [ ] **[Task name]**: [Description].
 
 ## Interactions & States
+
 - [ ] **[Task name]**: [Description]. Covers: [list of states, e.g., hover, loading, error, empty].
 - [ ] **[Task name]**: [Description].
 
 ## Responsive & Polish
+
 - [ ] **[Task name]**: [Description]. Breakpoints: [which ones].
 - [ ] **[Task name]**: Accessibility pass. [Specific checks from the brief].
 
 ## Review
-- [ ] **Design review**: Run /design-review against the brief.
+
+- [ ] **Design review**: Compare the built interface with the brief and record prioritized findings with visual evidence.
 ```
 
 ## Rules

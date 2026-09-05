@@ -32,12 +32,12 @@ Read the complete document and the directly relevant documents it points to. For
 
 For skill work, load only the matching reference:
 
-| Branch    | Trigger                                                                    | Reference                                           |
-| --------- | -------------------------------------------------------------------------- | --------------------------------------------------- |
-| Mechanics | Creating or restructuring a skill, or changing its packaging or invocation | [skill-mechanics.md](references/skill-mechanics.md) |
-| Evals     | Testing skill behavior or optimizing its description                       | [eval-guide.md](references/eval-guide.md)           |
-| Schemas   | Creating or reading eval, metadata, grading, or trigger JSON               | [schemas.md](references/schemas.md)                 |
-| Grading   | Judging assertions against test outputs                                    | [grader.md](agents/grader.md)                       |
+| Branch    | Trigger                                                      | Reference                                           |
+| --------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| Mechanics | Creating, editing, reviewing, or restructuring a skill       | [skill-mechanics.md](references/skill-mechanics.md) |
+| Evals     | Testing skill behavior or optimizing its description         | [eval-guide.md](references/eval-guide.md)           |
+| Schemas   | Creating or reading eval, metadata, grading, or trigger JSON | [schemas.md](references/schemas.md)                 |
+| Grading   | Judging assertions against test outputs                      | [grader.md](agents/grader.md)                       |
 
 **Complete when:** every instruction under review has a defined purpose and candidate owner.
 

@@ -1,6 +1,6 @@
 # Inertia and Svelte
 
-This reference covers Rails-side conventions for apps that use Inertia with Svelte. For CSS and styling patterns, also read the `tailwind` skill.
+This reference covers Rails-side conventions for apps that use Inertia with Svelte. Follow the application's established CSS and styling patterns.
 
 ## Props
 

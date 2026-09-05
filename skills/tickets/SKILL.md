@@ -1,13 +1,13 @@
 ---
 name: tickets
-description: Break a plan, spec, PRD, or parent issue into independently grabbable implementation tickets using tracer-bullet vertical slices. Use when converting plans into tickets, creating issue tracker work items, or splitting work into slices that AFK agents can pick up independently. Tracker-agnostic — the specific issue tracker's own skill owns publishing mechanics.
+description: Break a plan, spec, PRD, or parent issue into independently grabbable implementation tickets using tracer-bullet vertical slices. Use when converting plans into tickets, creating issue tracker work items, or splitting work into slices that AFK agents can pick up independently. Tracker-agnostic; installed tracker tooling owns publishing mechanics.
 ---
 
 # Tickets
 
 Break a plan into independently grabbable tickets using vertical slices, also called tracer bullets. Each ticket declares the blocking edges that gate it.
 
-This skill defines _what a good slice is_ and _what each slice must capture_. It is tracker-agnostic. How to publish — commands, fields, dependency syntax, parent links — belongs to the specific issue tracker's skill. When you reach the publish step, follow that tracker's skill for the mechanics.
+This workflow defines _what a good slice is_ and _what each slice must capture_. It is tracker-agnostic. Derive publishing commands, fields, dependency syntax, and parent links from the installed tracker and its current help.
 
 ## Core Rules
 
@@ -72,12 +72,12 @@ When migration batches cannot stay green alone, keep the sequence but let the ba
 4. Draft vertical-slice tickets, or an expand–contract sequence for wide refactors. For each, capture the fields in **What Each Ticket Captures**.
 5. Order tickets by dependency, blockers first, so later tickets can reference earlier ones.
 6. If the user has not asked for immediate publishing, present the breakdown first: title, blocked-by edges, and what each ticket delivers. Ask whether the granularity and blocking edges are right, then iterate until approved.
-7. Publish using the tracker's skill for mechanics: assemble the captured fields into the tracker's format, route implementation detail to a spec field if one exists, record dependencies structurally, and link each ticket back to the source plan/spec.
+7. Publish through the installed tracker: inspect its current help, assemble the captured fields into its format, route implementation detail to a spec field if one exists, record dependencies structurally, and link each ticket back to the source plan/spec.
 8. Verify the published result: the dependency graph resolves so the first unblocked ticket is the one you expect to start with, and dependencies are structural rather than prose-only. Work the frontier: any ticket whose blockers are done.
 
 ## What Each Ticket Captures
 
-Capture this information per ticket. The tracker's skill defines how to map these onto its fields.
+Capture this information per ticket, then map it onto fields supported by the installed tracker.
 
 - **Title** — the user-visible behavior delivered by the slice.
 - **What to build** — concise end-to-end behavior, not layer-by-layer implementation. Avoid specific file paths and code; they go stale. Exception: point to a prototype, or inline only the compact decision-rich part when it encodes the decision more precisely than prose.

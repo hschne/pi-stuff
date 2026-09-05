@@ -1,6 +1,6 @@
 ---
 name: ticgit
-description: "Use TicGit (`ti`) for Git-native issue tracking, spec/writeup workflows, ticket triage, implementation handoffs, dependencies, progress comments, reviews, and agent backlog loops. Use when creating, migrating, reading, implementing, closing, syncing, or automating tickets, specs, writeups, or ticket/spec workflows with `ti`. Also use to publish slices produced by the generic tickets skill into this tracker."
+description: "Use TicGit (`ti`) for Git-native issue tracking, spec/writeup workflows, ticket triage, implementation handoffs, dependencies, progress comments, reviews, and agent backlog loops. Use when creating, migrating, reading, implementing, closing, syncing, or automating tickets, specs, writeups, or publishing vertical slices with `ti`."
 ---
 
 # TicGit
@@ -35,7 +35,7 @@ The common mistake is putting per-ticket file-level detail in the writeup, where
 
 ## Mapping Ticket/Spec Slices to TicGit
 
-The tickets skill (and most spec/ticket templates) produce slices with a recurring set of fields. Map them onto `ti` as follows so behavior, how-to, ordering, and context each land in the right place:
+Map vertical slices onto `ti` as follows so behavior, implementation detail, ordering, and context each land in the right place:
 
 | Slice field                         | TicGit target                                                                                                                            |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -82,7 +82,7 @@ Tickets are local until shared. Run `ti sync` when you intentionally want to pul
    ti writeup edit <writeup-id> --file /tmp/revised-spec.md
    ti writeup show <writeup-id> --all
    ```
-3. Slice the writeup into thin, independently verifiable tickets — use the **tickets** skill for the slicing method — then publish, spec, link, and wire them as in the sections above.
+3. Slice the writeup into thin, independently verifiable vertical tickets, then publish, spec, link, and wire them as described above.
 
 ## Implementing One Ticket
 

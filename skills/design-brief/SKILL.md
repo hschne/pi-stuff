@@ -44,7 +44,7 @@ This skill creates a design brief through structured conversation. You may skip 
 
 Save the brief to `.agents/.design/<feature-slug>/DESIGN_BRIEF.md` where `<feature-slug>` is a short, lowercase, hyphenated name derived from the feature or page being designed (e.g., `onboarding-flow`, `settings-page`, `project-dashboard`).
 
-This folder structure ensures that running the design flow multiple times for different features does not overwrite previous work. All subsequent skills (design-architecture, design-tokens, design-tasks, design-review) will read from and write to this same subfolder.
+This folder structure prevents work on different features from overwriting earlier artifacts. Later design stages read from and write to the same feature subfolder.
 
 Example:
 
@@ -80,7 +80,7 @@ Example: "Progressive disclosure over upfront complexity" or "Confidence over sp
 
 ## Aesthetic Direction
 
-- **Philosophy**: [Named philosophy or described vibe. See /design-principles skill for reference.]
+- **Philosophy**: [Named philosophy or concrete description of typography, color, layout, spacing, motion, and details]
 - **Tone**: [Emotional register]
 - **Reference points**: [Existing products, sites, or styles this should feel like]
 - **Anti-references**: [What this should NOT feel like]

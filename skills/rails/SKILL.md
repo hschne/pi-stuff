@@ -49,11 +49,9 @@ Use the focused reference that matches the task:
 | inertia             | `app/controllers/**/*`, `app/javascript/**/*`           | [inertia](references/inertia.md)                         |
 | i18n                | `config/locales/**/*`                                   | [i18n](references/i18n.md)                               |
 
-## Related Skills
+## Adjacent Frontend Concerns
 
-- `better-stimulus` for Stimulus controller architecture and lifecycle patterns
-- `tailwind` for CSS, utility classes, DaisyUI usage.
-- `svelte` when using Svelte as fronted framework for InertiaJS
+When the application uses Stimulus, utility CSS, DaisyUI, or Svelte, follow its existing frontend conventions and installed-version documentation rather than introducing another pattern.
 
 ## Quick Workflow
 

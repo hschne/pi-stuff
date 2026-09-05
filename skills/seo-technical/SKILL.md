@@ -26,7 +26,7 @@ A page that cannot be crawled and indexed cannot rank — check that first, befo
 5. Confirm mobile viewport and content parity.
 6. Fix; re-verify.
 
-Implementation is platform-specific — on Jekyll, `jekyll-sitemap` emits `/sitemap.xml` and you add `robots.txt` yourself; see the `jekyll` skill.
+Implementation is platform-specific. On Jekyll, `jekyll-sitemap` emits `/sitemap.xml`; add `robots.txt` separately and verify both from the built site.
 
 ## Verify
 

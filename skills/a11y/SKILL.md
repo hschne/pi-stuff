@@ -52,7 +52,7 @@ Read the reference that matches the violation type before fixing:
 - Identify the upstream source: theme token, base class, component partial, or one-off inline style.
 - Apply the fix at the highest useful level. A token change in `theme.scss` beats patching 5 selectors.
 - For contrast fixes, adjust the color value and verify the new ratio meets the minimum (4.5:1 normal text, 3:1 large text / UI components).
-- For structural fixes (missing labels, heading gaps, landmark issues), follow the patterns in the HTML skill.
+- For structural fixes, use native semantic elements, associated labels, logical heading levels, landmarks, and ARIA only where semantics cannot express the requirement.
 
 ### 5. Re-run audit
 
@@ -68,8 +68,6 @@ Automated tools miss interaction and flow issues. After the automated scan is cl
 4. **Zoom**: Zoom to 200% — content must reflow without horizontal scroll or clipping.
 5. **Reduced motion**: Enable `prefers-reduced-motion` in DevTools and confirm animations are suppressed or toned down.
 
-## When Not to Use This Skill
+## Scope
 
-- **Building new markup from scratch** — use the `html` skill instead; it covers semantic patterns and ARIA.
-- **Styling decisions** — use the `css` or `scss` skill; they cover focus-visible, reduced-motion, and color functions.
-- This skill is for **auditing existing pages** and **fixing reported violations**.
+Use this workflow to audit existing pages and fix reported violations. New interface construction and styling work that is not driven by an accessibility finding is outside its scope.

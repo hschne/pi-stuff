@@ -1,17 +1,18 @@
 ---
 name: cf
-description: Use the Cloudflare `cf` CLI and Local Explorer safely. Trigger when using `cf`, Cloudflare CLI, Cloudflare API commands, Wrangler next-gen CLI, Cloudflare Local Explorer, Miniflare local resources, D1/KV/R2/Durable Objects/Workflows via local explorer, or Cloudflare account/zone/DNS management from the command line.
+description: Use the Cloudflare `cf` CLI and Local Explorer safely. Trigger when using `cf`, Cloudflare CLI, Wrangler, Cloudflare Local Explorer, D1/KV/R2/Durable Objects/Workflows, account/zone/DNS management, or uploading publicly hosted media to Cloudflare R2.
 ---
 
 # Cloudflare cf CLI
 
-Use `cf` for Cloudflare API operations and for Local Explorer against local Miniflare resources.
+Use `cf` for Cloudflare API operations and local resource simulations. This guidance targets `cf` 0.9.0.
 
 ## Core Rules
 
-- Treat `cf` auth as secret-bearing. Tokens are stored under `~/.config/.cf`; do not read, cat, copy, summarize, or commit that directory.
+- Run `cf --version` first. If it is not 0.9.x, inspect current help before following version-specific commands.
+- Treat `cf` auth as secret-bearing. Do not read, copy, summarize, or commit credential files reported by `cf auth whoami`.
 - Prefer discovery over guessing. `cf` is generated and still a technical preview, so command shapes can vary by product.
-- Distinguish remote and local operations explicitly. Default commands hit Cloudflare remote APIs; local commands need `--local --local-endpoint <url>`.
+- Distinguish remote and local operations explicitly. Default commands hit Cloudflare remote APIs; local simulations require `--local` and may share state through `--persist-to`.
 - Use `--dry-run` before mutating resources when the command supports it.
 
 ## Discovery Commands
@@ -38,65 +39,53 @@ Notes:
 cf dns records create -z example.com --dry-run --body '{"type":"A","name":"www","content":"203.0.113.10","ttl":1,"proxied":true}'
 ```
 
-## Authentication and Context
+## Authentication and Target Selection
 
-Use non-secret checks and context commands:
+Inspect authentication and named profiles without reading credential files:
 
 ```bash
 cf auth whoami
-cf context show
-cf context set account-id <account-id>
-cf context set zone <zone-or-zone-id>
-cf context clear <account-id|zone|all>
+cf auth list
 ```
 
-Credential sources:
+Use `cf auth login` for the default profile. For separate identities, use `cf auth create <name>`, then select one per command with `--profile <name>` or bind it to a directory with `cf auth activate <name> [dir]`. Profile creation, activation, deletion, and logout change local authentication configuration; perform them only when requested.
 
-1. `CLOUDFLARE_API_TOKEN` environment variable
-2. `cf auth login` OAuth flow
-3. Stored OAuth state under `~/.config/.cf/auth.jsonc`
-
-Context sources:
-
-1. Flags such as `-z <zone-or-zone-id>`
-2. `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_ZONE_ID`
-3. Project `.cfrc`
-4. Global `~/.config/.cf/config.json`
-
-`.cfrc` stores defaults such as account and zone context, not API tokens. Still ask before committing it because account IDs and zones may be environment-specific.
-
-## Local Explorer
-
-Local Explorer exposes a local Cloudflare API mirror for simulated resources started by `wrangler dev`, `cf dev`, or the Cloudflare Vite plugin.
-
-Workflow:
-
-1. Start the app locally with `cf dev`, `wrangler dev`, or the Vite plugin.
-2. Note the local origin, usually something like `http://localhost:8787`.
-3. Confirm the Local Explorer API is available:
+A profile may still expose several Cloudflare accounts. `cf auth whoami` reports their IDs without exposing the token. When more than one account is available, select the intended account explicitly:
 
 ```bash
-curl -fsS <local-origin>/cdn-cgi/explorer/api >/dev/null
+CLOUDFLARE_ACCOUNT_ID=<account-id> cf <command...>
 ```
 
-4. Run `cf` commands against local state with both local flags:
+Keep `CLOUDFLARE_ACCOUNT_ID` on every command in that operation. Use `-z <zone-or-zone-id>` or `CLOUDFLARE_ZONE_ID` when a command needs zone context. Confirm selection with a read-only command against the intended resource.
+
+`CLOUDFLARE_API_TOKEN` takes precedence over OAuth profiles. Let `cf auth whoami` identify the active credential source; do not inspect the underlying file.
+
+## Local Resource Simulations
+
+In 0.9.x, `--local` operates on local simulated resources without a Local Explorer endpoint. Use `--persist-to <directory>` when separate commands or processes must share the same local state:
 
 ```bash
-cf <product> <command...> --local --local-endpoint <local-origin>
+cf <product> <command...> --local --persist-to <state-directory>
 ```
 
 Example:
 
 ```bash
-cf d1 list --local --local-endpoint http://localhost:8787
+cf r2 buckets list --local --persist-to .wrangler/state
 ```
 
-Use local mode for inspecting or changing simulated D1, KV, R2, Durable Objects, and Workflows data. Do not assume local changes affect remote Cloudflare resources.
+The default persistence directory is `~/.config/cloudflare/state`. Prefer a project-local path when the simulated state belongs to one project. In 0.9.0, a local command may print its complete result but keep the simulator process alive; after confirming complete output, interrupt it rather than waiting indefinitely. Local changes do not affect remote Cloudflare resources.
 
 ## Safety Checklist Before Mutations
 
 1. Run the command with `--help` and confirm required params.
-2. Confirm target context with `cf context show` or explicit flags.
-3. Add `--local --local-endpoint ...` if the task is about Local Explorer/local data.
+2. Confirm the target account with `cf auth whoami`, then pass `CLOUDFLARE_ACCOUNT_ID` explicitly when multiple accounts are available.
+3. Add `--local` and, when state must persist across commands, `--persist-to <directory>` for local simulations.
 4. Use `--dry-run` if available.
 5. Keep command output free of tokens and secret values.
+
+## References
+
+| Topic           | When to Read                                   | Reference                                        |
+| --------------- | ---------------------------------------------- | ------------------------------------------------ |
+| Public R2 media | Hosting local media at verified public R2 URLs | [public R2 media](references/public-r2-media.md) |

@@ -1,9 +1,6 @@
 ---
 name: javascript
-description: >-
-  Core JavaScript language conventions, idioms, and modern practices. Invoke whenever task
-  involves any interaction with JavaScript code — writing, reviewing, refactoring, debugging,
-  or understanding .js/.jsx files and JavaScript projects.
+description: Core JavaScript language conventions, idioms, and modern practices. Use when writing, reviewing, refactoring, debugging, or understanding JavaScript code, .js/.jsx files, or JavaScript projects.
 ---
 
 # JavaScript
@@ -218,8 +215,3 @@ Bad review comment:
 Good review comment:
   "`let` -> `const` — `config` is never reassigned."
 ```
-
-## Integration
-
-This skill governs JavaScript implementation choices in this agent setup. The **typescript** skill extends this one for
-TypeScript projects.

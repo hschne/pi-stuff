@@ -1,5 +1,6 @@
 {
   "quietStartup": true,
+  "tuiMode": "fullscreen",
   "defaultProjectTrust": "always",
   "lastChangelogVersion": "0.84.4",
   "defaultProvider": "openai-codex",
