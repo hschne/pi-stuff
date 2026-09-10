@@ -2,7 +2,6 @@
 name: simple-english
 description: Explain in plain Simplified Technical English using short answers and no jargon.
 argument-hint: "What to explain (optional)"
-disable-model-invocation: true
 ---
 
 # Simple English
