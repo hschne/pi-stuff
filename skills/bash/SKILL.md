@@ -121,6 +121,41 @@ function main() {
 }
 ```
 
+### Repeatable Values Over One-Off Flags
+
+When an option selects from a set, take the value as an argument and let it
+repeat. Accumulate into one variable, accept a comma separated list, and strip
+the leading separator before use. Name the values after the vocabulary of
+whatever the script wraps.
+
+**Good:**
+
+```bash
+--level)
+  levels="$levels,${2:?Error: --level requires a value}"
+  shift 2
+  ;;
+--level=*)
+  levels="$levels,${1#*=}"
+  shift
+  ;;
+```
+
+`--level warn --level error`, `--level warn,error` and `--level=warn` all work.
+Iterate with `for level in ${levels//,/ }`, and default when `${levels#,}` is
+empty. A new value costs nothing.
+
+**Bad:**
+
+```bash
+--warning) warning=true; shift ;;
+--error)   error=true; shift ;;
+--all)     all=true; shift ;;
+```
+
+Every value needs its own flag, `--all` exists only to undo the others, and the
+caller cannot tell which combinations are legal.
+
 ## Subcommands
 
 For scripts with multiple operations, dispatch on the first argument:
