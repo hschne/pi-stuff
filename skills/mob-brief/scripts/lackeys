@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/mob"
+
+function main() {
+  local since=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -s | --since)
+      since="${2:?Error: --since requires a value}"
+      shift 2
+      ;;
+    -*)
+      die "Unknown option: $1"
+      ;;
+    *)
+      break
+      ;;
+    esac
+  done
+
+  command -v jq >/dev/null 2>&1 || die "jq is required but not installed"
+  [[ -d "$STATE_DIR" ]] || die "no mob state in $STATE_DIR"
+  [[ -n "$since" ]] || since=$(last_working_day)
+
+  print_lackeys "$since" "$@"
+}
+
+last_working_day() {
+  if [[ $(date +%u) -eq 1 ]]; then
+    date -d '3 days ago' +%F
+  else
+    date -d 'yesterday' +%F
+  fi
+}
+
+# One file per coordination directory, named <dir>-<hash of its path>. The hash
+# changes when the path does, orphaning the old file, so every file is replayed.
+state_files() {
+  local scope="$1"
+  find "$STATE_DIR" -maxdepth 1 -type f -name "${scope:+$scope-}*.jsonl"
+}
+
+# Live means an open tmux pane tagged with the lackey's name, the same signal
+# mob list uses.
+live_panes() {
+  tmux list-panes -a -F '#{@mob_lackey}' 2>/dev/null | grep -v '^$' || true
+}
+
+print_lackeys() {
+  local since="$1" scope panes before
+  local files=()
+  shift
+
+  for scope in "${@:-}"; do
+    before=${#files[@]}
+    mapfile -t -O "$before" files < <(state_files "$scope")
+    [[ ${#files[@]} -gt $before ]] || die "no mob state in $STATE_DIR for scope ${scope:-any}"
+  done
+  panes=$(live_panes)
+
+  echo "window: retired since $since"
+  jq -rs --arg since "$since" --arg panes "$panes" '
+    ($panes | split("\n")) as $live
+    | sort_by(.ts)
+    | reduce .[] as $e ({};
+        if $e.event == "lackey_registered" then .[$e.name] = ($e + {status: "active"})
+        elif .[$e.name] == null then .
+        elif $e.event == "dismissed" then .[$e.name] += {status: "dismissed", ts: $e.ts}
+        elif $e.event == "summoned" then .[$e.name] += {status: "active", ts: $e.ts}
+        elif $e.event == "retired" then .[$e.name] += {status: "retired", ts: $e.ts}
+        else . end)
+    | [.[]]
+    | map(.state = (if .status != "active" then .status
+                    elif (.name | IN($live[])) then "live"
+                    else "gone" end))
+    | map(select(.state != "retired" or .ts >= $since))
+    | sort_by({live: 0, gone: 1, dismissed: 2, retired: 3}[.state], .ts)
+    | .[]
+    | "\(.state) \(.name) \(.role) \(.workspace) \(.brief | split("\n")[0] | .[0:120])"
+  ' "${files[@]}"
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS] [SCOPE...]
+
+Print the window, then every lackey mob has recorded, one per line:
+STATE NAME ROLE WORKSPACE BRIEF. State is live, gone, dismissed, or retired.
+Retired lackeys older than the window are dropped; the rest always print.
+
+SCOPE is a coordination directory name (the basename of the mob root, e.g.
+core). Without one, every coordination directory is read.
+
+Options:
+  -h, --help         Show this help message
+  -s, --since DATE   Window start for retired lackeys (default: yesterday, or
+                     Friday on Mondays)
+EOF
+}
+
+die() {
+  echo "Error: $1" >&2
+  exit "${2:-1}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

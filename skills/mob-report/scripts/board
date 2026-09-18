@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly DEFAULT_REPO="zarpay/core"
+readonly KNOWN_STATES="live gone dismissed"
+
+function main() {
+  local repo="$DEFAULT_REPO"
+  local root=""
+  local states=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -R | --repo)
+      repo="${2:?Error: --repo requires a value}"
+      shift 2
+      ;;
+    -r | --root)
+      root="${2:?Error: --root requires a value}"
+      shift 2
+      ;;
+    -s | --state)
+      mapfile -t -O "${#states[@]}" states < <(tr ',' '\n' <<<"${2:?Error: --state requires a value}")
+      shift 2
+      ;;
+    -*)
+      die "Unknown option: $1"
+      ;;
+    *)
+      die "Unexpected argument: $1"
+      ;;
+    esac
+  done
+
+  command -v mob >/dev/null 2>&1 || die "mob is required but not installed"
+  command -v gh >/dev/null 2>&1 || die "gh is required but not installed"
+  command -v jq >/dev/null 2>&1 || die "jq is required but not installed"
+  [[ ${#states[@]} -gt 0 ]] || states=(live)
+  local state
+  for state in "${states[@]}"; do
+    [[ " $KNOWN_STATES " == *" $state "* ]] || die "Unknown state: $state (known: $KNOWN_STATES)"
+  done
+
+  print_board "$repo" "$root" "${states[@]}"
+}
+
+lackeys() {
+  local root="$1"
+
+  if [[ -n "$root" ]]; then
+    (cd "$root" && mob list --json)
+  else
+    mob list --json
+  fi
+}
+
+# One query for the whole repo beats one per lackey, and closed PRs have to be
+# in it so a merged branch still shows its PR.
+pull_requests() {
+  local repo="$1"
+
+  gh pr list -R "$repo" --state all --limit 200 \
+    --json number,url,state,isDraft,headRefName,statusCheckRollup |
+    jq 'map({key: .headRefName, value: {
+          number, url,
+          state: (if .isDraft then "draft" else (.state | ascii_downcase) end),
+          ci: (
+            [.statusCheckRollup[]? | (.conclusion // .status)] as $checks
+            | if ($checks | length) == 0 then "none"
+              elif ($checks | any(. == "FAILURE" or . == "ERROR" or . == "TIMED_OUT" or . == "CANCELLED")) then "failing"
+              elif ($checks | any(. == "PENDING" or . == "IN_PROGRESS" or . == "QUEUED")) then "running"
+              else "passing" end
+          )
+        }}) | from_entries'
+}
+
+print_board() {
+  local repo="$1" root="$2"
+  shift 2
+  local states_json
+  states_json=$(printf '%s\n' "$@" | jq -R . | jq -sc .)
+
+  jq -r -n \
+    --argjson lackeys "$(lackeys "$root")" \
+    --argjson prs "$(pull_requests "$repo")" \
+    --argjson states "$states_json" '
+    $lackeys
+    | map(select(.state | IN($states[])))
+    | map(
+        (.meta.branch // "") as $branch
+        | ($prs[$branch] // null) as $pr
+        | {
+            name, role, state,
+            pane:   (if (.pane // "") == "" then "-" else .pane end),
+            ticket: (.meta.ticket // "-"),
+            branch: (if $branch == "" then "-" else $branch end),
+            report: (if .report then "\(.report.status): \(.report.text)" | sub(": $"; "") else "-" end),
+            pr:     (if $pr then "#\($pr.number) \($pr.state) \($pr.ci) \($pr.url)" else "-" end)
+          }
+      )
+    | .[]
+    | [.state, .name, .role, .pane, .ticket, .branch, .report, .pr]
+    | @tsv
+  '
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Print one tab-separated line per lackey:
+STATE  NAME  ROLE  PANE  TICKET  BRANCH  REPORT  PR
+
+PR is "#NUMBER STATE CI URL", where STATE is open, draft, merged or closed and
+CI is passing, failing, running or none. Every empty field is "-".
+
+Options:
+  -h, --help          Show this help message
+  -R, --repo NAME     GitHub repository (default: $DEFAULT_REPO)
+  -r, --root PATH     Coordination directory to read (default: current directory)
+  -s, --state STATE   Lackey states to include, repeatable or comma-separated:
+                      live, gone, dismissed (default: live)
+EOF
+}
+
+die() {
+  echo "Error: $1" >&2
+  exit "${2:-1}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

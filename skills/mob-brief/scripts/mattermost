@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly MM="$HOME/.claude/skills/mattermost/scripts/mm"
+readonly MM_URL="${MM_URL:-https://mattermost.zarhq.dev}"
+readonly MM_TEAM="${MM_TEAM:-zar}"
+
+function main() {
+  local since=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -s | --since)
+      since="${2:?Error: --since requires a value}"
+      shift 2
+      ;;
+    -*)
+      die "Unknown option: $1"
+      ;;
+    *)
+      break
+      ;;
+    esac
+  done
+
+  if [[ $# -ne 1 ]]; then
+    usage
+    exit 1
+  fi
+
+  command -v jq >/dev/null 2>&1 || die "jq is required but not installed"
+  [[ -x "$MM" ]] || die "mm not found at $MM"
+  [[ -n "$since" ]] || since=$(last_working_day)
+
+  echo "permalink for any post id below: $MM_URL/$MM_TEAM/pl/<id>"
+  print_channel "$1" "$since"
+  print_unread_dms
+}
+
+last_working_day() {
+  if [[ $(date +%u) -eq 1 ]]; then
+    date -d '3 days ago' +%F
+  else
+    date -d 'yesterday' +%F
+  fi
+}
+
+print_channel() {
+  local channel="$1" since="$2"
+  local channel_id
+
+  channel_id=$("$MM" api GET "/teams/name/$MM_TEAM/channels/name/$channel" | jq -r .id)
+  echo
+  echo "# $channel since $since"
+  print_posts "$channel_id" 60 "$(date -d "$since" +%s%3N)"
+}
+
+# Only unread DMs surface; read state is the one signal that says Hans hasn't
+# seen a message. Judging replied-vs-not is unreliable (reactions don't count
+# as replies), so no judgment is attempted here.
+print_unread_dms() {
+  local me members channel_id other_id other unread
+
+  me=$("$MM" api GET /users/me | jq -r .id)
+  members=$("$MM" api GET "/users/me/channel_members?per_page=200")
+  echo
+  echo "# unread DMs"
+  "$MM" api GET /users/me/channels |
+    jq -r --arg me "$me" --argjson members "$members" '
+      ($members | map({(.channel_id): .msg_count}) | add) as $seen
+      | .[] | select(.type == "D")
+      | (.total_msg_count - ($seen[.id] // 0)) as $unread
+      | select($unread > 0)
+      | [.id, (.name | sub($me; "") | sub("__"; "")), ([$unread, 8] | min)] | @tsv' |
+    while IFS=$'\t' read -r channel_id other_id unread; do
+      other=$("$MM" api GET "/users/$other_id" | jq -r .username)
+      echo
+      echo "## @$other"
+      print_posts "$channel_id" "$unread"
+    done
+}
+
+# Posts print oldest-first as "[ts] @user <post id>: text", skipping system
+# posts. mm read can't take a raw channel id (it parses 26-char ids as post
+# ids), hence the raw API.
+print_posts() {
+  local channel_id="$1" per_page="$2" since_ms="${3:-0}"
+  local posts ids users
+
+  posts=$("$MM" api GET "/channels/$channel_id/posts?per_page=$per_page")
+  ids=$(jq -c '[.posts[].user_id] | unique' <<<"$posts")
+  users=$("$MM" api POST /users/ids "$ids")
+  jq -r --argjson users "$users" --argjson since "$since_ms" '
+    ($users | map({(.id): .username}) | add) as $u
+    | [.order[] as $id | .posts[$id]]
+    | map(select(.type == "" and .create_at >= $since))
+    | reverse | .[]
+    | "[\(.create_at / 1000 | floor | strftime("%Y-%m-%d %H:%M"))]"
+      + " @\($u[.user_id] // .user_id)"
+      + (if .root_id != "" then " (reply)" else "" end)
+      + " \(.id): \(.message | gsub("\n"; "\n    "))"
+  ' <<<"$posts"
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS] CHANNEL
+
+Print CHANNEL's posts inside the window, then any DMs Hans has not read yet.
+Read DMs never appear — reply state can't be judged reliably.
+
+Options:
+  -h, --help         Show this help message
+  -s, --since DATE   Window start (default: yesterday, or Friday on Mondays)
+EOF
+}
+
+die() {
+  echo "Error: $1" >&2
+  exit "${2:-1}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+function main() {
+  local repo="zarpay/core"
+  local since=""
+  local open_only=false
+  local author
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -R | --repo)
+      repo="${2:?Error: --repo requires a value}"
+      shift 2
+      ;;
+    -s | --since)
+      since="${2:?Error: --since requires a value}"
+      shift 2
+      ;;
+    -o | --open)
+      open_only=true
+      shift
+      ;;
+    -*)
+      die "Unknown option: $1"
+      ;;
+    *)
+      break
+      ;;
+    esac
+  done
+
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 1
+  fi
+
+  command -v gh >/dev/null 2>&1 || die "gh is required but not installed"
+  command -v jq >/dev/null 2>&1 || die "jq is required but not installed"
+
+  if [[ "$open_only" == true ]]; then
+    [[ -z "$since" ]] || die "--open ignores the window; drop --since"
+    for author in "$@"; do
+      list_open_prs "$repo" "$author"
+    done
+    return
+  fi
+
+  [[ -n "$since" ]] || since=$(last_working_day)
+  echo "window: since $since"
+  for author in "$@"; do
+    list_prs "$repo" "$author" "$since"
+  done
+}
+
+last_working_day() {
+  if [[ $(date +%u) -eq 1 ]]; then
+    date -d '3 days ago' +%F
+  else
+    date -d 'yesterday' +%F
+  fi
+}
+
+# One author per query — multiple author: qualifiers in one search return nothing.
+list_prs() {
+  local repo="$1" author="$2" since="$3"
+
+  gh pr list -R "$repo" --author "$author" --state open \
+    --search "draft:false created:>=$since" \
+    --json number,title,url \
+    --template "{{range .}}opened ${author} #{{.number}} {{.title}} {{.url}}{{\"\n\"}}{{end}}"
+  gh pr list -R "$repo" --author "$author" --state merged \
+    --search "merged:>=$since" \
+    --json number,title,url \
+    --template "{{range .}}merged ${author} #{{.number}} {{.title}} {{.url}}{{\"\n\"}}{{end}}"
+}
+
+# CI verdict is the worst rollup entry: a single failed check outranks anything
+# still running. Check runs report status/conclusion, commit statuses report
+# state, and a PR carries either kind.
+list_open_prs() {
+  local repo="$1" author="$2"
+
+  gh pr list -R "$repo" --author "$author" --state open --limit 50 \
+    --json number,title,url,isDraft,reviewDecision,statusCheckRollup |
+    jq -r --arg author "$author" '
+      def verdict:
+        map({result: (.conclusion // .state // ""), status: (.status // "COMPLETED")}) as $checks
+        | if ($checks | length) == 0 then "none"
+          elif $checks | any(.result | IN("FAILURE", "TIMED_OUT", "CANCELLED",
+                                          "ACTION_REQUIRED", "STARTUP_FAILURE", "ERROR")) then "failing"
+          elif $checks | any(.status != "COMPLETED" or (.result | IN("", "PENDING", "EXPECTED"))) then "pending"
+          else "passing" end;
+      .[]
+      | "open \($author) #\(.number)"
+        + (if .isDraft then " draft" else "" end)
+        + " ci:\(.statusCheckRollup // [] | verdict)"
+        + " review:\(.reviewDecision // "" | if . == "" then "none" else ascii_downcase end)"
+        + " \(.title) \(.url)"'
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS] AUTHOR...
+
+Print the window, then each author's PRs opened or merged inside it, one per
+line: STATE AUTHOR #NUMBER TITLE URL. Drafts are excluded.
+
+With --open, print every open PR instead (at most 50, drafts included and
+marked, no window line):
+open AUTHOR #NUMBER [draft] ci:VERDICT review:DECISION TITLE URL.
+
+Options:
+  -h, --help         Show this help message
+  -o, --open         Report every open PR instead of the window
+  -R, --repo REPO    Repository (default: zarpay/core)
+  -s, --since DATE   Window start (default: yesterday, or Friday on Mondays;
+                     rejected with --open)
+EOF
+}
+
+die() {
+  echo "Error: $1" >&2
+  exit "${2:-1}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
